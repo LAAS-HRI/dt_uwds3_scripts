@@ -52,13 +52,21 @@ class TagServiceNode(object):
             if id not in self.scene_nodes.keys():
                 pose_s.header.frame_id=''
             else:
-                node = self.scene_node[id]
+                node = self.scene_nodes[id]
                 if node.pose is None:
                     pose_s.header.frame_id=''
                 else:
-                    pose_s.pose.position =node.pose.pos.position.to_array()
-                    pose_s.pose.orientation =node.pose.quaternion()
-                    print(node)
+                    position = node.pose.pos.position().to_array()
+                    pose_s.pose.position.x = position[0]
+                    pose_s.pose.position.y = position[1]
+                    pose_s.pose.position.z = position[2]
+
+                    orientation = node.pose.quaternion()
+
+                    pose_s.pose.orientation.x = orientation[0]
+                    pose_s.pose.orientation.y = orientation[1]
+                    pose_s.pose.orientation.z = orientation[2]
+                    pose_s.pose.orientation.w = orientation[3]
                     pose_s.header.stamp = node.pose.pos.last_update
                     pose_s.header.frame_id = self.header.frame_id
             ret_list.append(pose_s)
