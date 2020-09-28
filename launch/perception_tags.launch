@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="rgb_image_topic" default="/kinect2/qhd/image_color"/>
+  <arg name="rgb_camera_info_topic" default="kinect2/qhd/camera_info"/>
+
+  <arg name="global_frame_id" default="base_footprint"/>
+
+  <arg name="marker_size" default="4.7" />
+  <arg name="max_new_marker_error" default="0.08"/>
+  <arg name="max_track_error" default="0.2"/>
+  <!-- <arg name="bundle_files" default="$(find exp_director_task)/tags/MarkerData_100.xml $(find exp_director_task)/tags/MarkerData_101.xml $(find exp_director_task)/tags/MarkerData_102.xml"/>
+
+  <node name="ar_track_alvar" pkg="ar_track_alvar" type="findMarkerBundlesNoKinect" respawn="false" output="screen" args="$(arg marker_size) $(arg max_new_marker_error) $(arg max_track_error) $(arg rgb_image_topic) $(arg rgb_camera_info_topic) $(arg global_frame_id) $(arg bundle_files)" /> -->
+
+  <arg name="publish_viz" default="true"/>
+  <arg name="publish_tf" default="true"/>
+
+  <!-- <arg name="ar_tag_config" default="$(find shipping_experiment)/config/ar_tags/ar_config.yaml"/>
+  <arg name="cad_models_search_path" default="$(find shipping_experiment)/models/cad_models"/> -->
+
+  <node name="ar_perception" pkg="dt_uwds3_scripts" type="ar_perception_node.py" args="" output="screen" respawn="false">
+    <rosparam subst_value="true">
+
+      rgb_camera_info_topic: $(arg rgb_camera_info_topic)
+      global_frame_id: $(arg global_frame_id)
+
+      publish_viz: $(arg publish_viz)
+      publish_tf: $(arg publish_tf)
+
+    </rosparam>
+  </node>
+
+</launch>
