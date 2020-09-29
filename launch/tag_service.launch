@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <node name="ar_perception" pkg="dt_uwds3_scripts" type="ar_perception_node.py" args="" output="screen" respawn="false">
+  <node name="tag_service" pkg="dt_uwds3_scripts" type="tag_service_node.py" args="" output="screen" respawn="false">
     <rosparam subst_value="true">
 
 
