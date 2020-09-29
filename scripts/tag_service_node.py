@@ -39,6 +39,7 @@ class TagServiceNode(object):
 
     def world_callback(self, world_msg):
         self.header = world_msg.header
+        self.scene_nodes = {}
         for node in world_msg.world.scene:
             self.scene_nodes[node.id] = SceneNode().from_msg(node)
 
