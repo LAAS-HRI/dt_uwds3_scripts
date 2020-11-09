@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 import rospy
 import cv2
+import numpy as np
 from tf.transformations import quaternion_from_euler
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
@@ -22,85 +23,59 @@ from ontologenius import OntologiesManipulator
 from ontologenius import OntologyManipulator
 from pr2_motion_tasks_msgs.srv import GetPose
 from pr2_motion_tasks_msgs.srv import GetPoseResponse
+from tf.transformations import euler_matrix
 
 DEFAULT_SENSOR_QUEUE_SIZE = 1
-
+VALUEY = 0.3
+VALUEZ = 0.3
 
 class ArPerceptionNode(object):
     def __init__(self):
         """
         """
-
-        # self.tag_service = rospy.Service("~getPose",GetPose, self.send_ar_tag, buff_size=65536)
-
         self.tf_bridge = TfBridge()
 
 
         # ontologiesManipulator =OntologiesManipulator()
-        # self.onto = ontologiesManipulator.get("common_ground")
+        # self.onto = ontologiesManipulator.get("robot")
 
-
-        self.onto = OntologyManipulator("")
+        print("hhhhhh")
+        self.global_frame_id = rospy.get_param("~global_frame_id")
+        print self.global_frame_id
+        print("hhhhhh")
+        self.ontologies_manip = OntologiesManipulator()
+        self.ontologies_manip.add("robot")
+        self.onto=self.ontologies_manip.get("robot")
+        self.onto.close()
+        print("j")
         self.global_frame_id = rospy.get_param("~global_frame_id", "map")
-
-        # self.bridge = CvBridge()
-        # self.robot_camera = None
-        # self.camera_info = None
-
-        # self.events = []
-
-        # self.robot_camera_clipnear = rospy.get_param("~robot_camera_clipnear", 0.1)
-        # self.robot_camera_clipfar = rospy.get_param("~robot_camera_clipfar", 25.0)
-
         self.publish_tf = rospy.get_param("~publish_tf", False)
 
-        # self.publish_viz = rospy.get_param("~publish_viz", True)
 
         self.world_publisher = WorldPublisher("ar_tracks", self.global_frame_id)
 
-        # self.marker_publisher = MarkerPublisher("ar_markers")
-
         self.ar_pose_marker_sub = rospy.Subscriber("ar_pose_marker", AlvarMarkers, self.observation_callback)
+        self.ar_pose_visible_marker = rospy.Subscriber("ar_pose_visible_marker",AlvarVisibleMarkers,self.visible_observation_callback)
+        self.joint_state_subscriber = rospy.Subscriber("/joint_states", JointState, self.joint_states_callback)
         self.ar_nodes = {}
         self.blacklist_id = []
         self.id_link = {} # Dictionarry for tag ID
 
 
 
-
-    # def camera_info_callback(self, msg):get_worget_worldget_worldld
-    #     """ """
-    #     if self.camera_info is None:
-    #         rospy.loginfo("[ar_perception] Camera info received !")
-    #     self.camera_info = msg
-    #     self.camera_frame_id = msg.header.frame_id
-    #     self.robot_camera = Camera().from_msg(msg,
-    #                                           clipnear=self.robot_camera_clipnear,
-    #                                           clipfar=self.robot_camera_clipfar)
-
     def observation_callback(self, ar_marker_msgs):
         """
         """
 
-
-        # if self.robot_camera is not None or True:
-        #
-        #     header.stamp = rospy.Time()
-        #
-        #
-        #     # success, view_pose = self.tf_bridge.get_pose_from_tf(self.global_frame_id, self.camera_frame_id)
-        #     success=True
-        #     if success is not True:
-        #         rospy.logwarn("[ar_perception] The camera sensor is not localized in world space (frame '{}'), please check if the sensor frame is published in /tf".format(self.global_frame_id))
-        #     else:
-
         all_nodes = []
         header = ar_marker_msgs.header
-        for marker in ar_marker_msgs.markers:
 
+        for marker in ar_marker_msgs.markers:
             if not(marker.id in self.blacklist_id):
                 if not (marker.id in self.id_link):
                     self.new_node(marker)
+                # print marker.id
+                # print self.id_link
                 id = self.id_link[marker.id]
                 pose = Vector6D().from_msg(marker.pose.pose)
                 header = marker.header
@@ -112,17 +87,105 @@ class ArPerceptionNode(object):
                     self.ar_nodes[id].pose.rot.update(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
 
                 all_nodes.append(self.ar_nodes[id])
-                # print self.ar_nodes[id].id
 
 
-
-            self.world_publisher.publish(all_nodes, [],header)
-            # if self.publish_viz is True:
-            #     self.marker_publisher.publish(all_nodes, header)
+            self.world_publisher.publish(self.ar_nodes.values(), [],header)
+            # print("pub")
 
             if self.publish_tf is True:
-                self.tf_bridge.publish_tf_frames(all_nodes, [], header)
+                self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header)
             # print self.ar_nodes
+
+
+    def validity(self,marker):
+        head_pose = self.get_pose_from_tf( marker.header.frame_id,
+                                           "head_tilt_joint",
+                                            marker.header.stamp)
+
+
+        x =  marker.pose.pose.position.x
+        y =  marker.pose.pose.position.y
+        z =  marker.pose.pose.position.z
+        mpose=np.array([x,y,z])
+        direction = np.array([x-head_pose.pos.x,y-head_pose.pos.y,z-head_pose.pos.z])
+
+        rotation_matrix = euler_matrix(head_pose.rot.x,
+                                                            head_pose.rot.y,
+                                                            head_pose.rot.z)
+        un_homogen = lambda x: np.array([i/(x[-1]*1.) for i in x[:-1]])
+        xaxis = un_homogen(np.dot(rotation_matrix,[1,0,0,1]))
+        yaxis = un_homogen(np.dot(rotation_matrix,[0,1,0,1]))
+        zaxis = un_homogen(np.dot(rotation_matrix,[0,0,1,1]))
+
+        proj_on_y=np.dot(direction,yaxis)*yaxis/(np.linalg.norm(yaxis))
+        proj_on_z=np.dot(direction,zaxis)*zaxis/(np.linalg.norm(zaxis))
+        proj_on_xz_plane = direction-proj_on_y
+        proj_on_xy_plane = direction-proj_on_z
+        dot_x_xy =np.dot(proj_on_xy_plane,xaxis)/np.linalg.norm(xaxis)/np.linalg.norm(proj_on_xy_plane)
+        dot_x_xz =np.dot(proj_on_xz_plane,xaxis)/np.linalg.norm(xaxis)/np.linalg.norm(proj_on_xz_plane)
+        if abs(dot_x_xy)<VALUEZ and abs(dot_x_xz)<VALUEY:
+            return True
+
+
+
+
+    def visible_observation_callback(self, ar_marker_msgs):
+        """
+        """
+        dic_marker = {}
+        res_list=[]
+        for marker in ar_marker_msgs:
+            if self.validity.marker(marker):
+                if marker.main_id in dic_marker.keys():
+                    dic_marker[marker.main_id].append(maker)
+                else:
+                    dic_marker[marker.main_id]=[marker]
+
+        for marker_main_id in dic_marker.keys():
+            ret =dic_marker[marker_main_id][0]
+            ret_conf = ret.confidence
+            for marker in dic_marker[marker_main_id]:
+                if marker.confidence>ret_conf:
+                    ret_conf = marker.confidence
+                    ret = marker
+            res_list.append(ret)
+
+        self.observation(res_list,ar_marker_msgs.header)
+
+
+    def observation(self, ar_marker_list,header):
+        """
+        """
+
+        all_nodes = []
+
+        for marker in ar_marker_list:
+            if not(marker.main_id in self.blacklist_id):
+                if not (marker.main_id in self.id_link):
+                    self.new_node(marker)
+                # print marker.main_id
+                # print self.id_link
+                id = self.id_link[marker.main_id]
+                pose = Vector6D().from_msg(marker.pose.pose)
+                header = marker.header
+                if self.ar_nodes[id].pose is None:
+                    self.ar_nodes[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
+                                                                   rx=pose.rot.x, ry=pose.rot.y, rz=pose.rot.z, time=header.stamp)
+                else:
+                    self.ar_nodes[id].pose.pos.update(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
+                    self.ar_nodes[id].pose.rot.update(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
+
+                all_nodes.append(self.ar_nodes[id])
+
+
+            self.world_publisher.publish(self.ar_nodes.values(), [],header)
+            # print("pub")
+
+            if self.publish_tf is True:
+                self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header)
+            # print self.ar_nodes
+
+
 
 
     def new_node(self,marker):
@@ -133,6 +196,7 @@ class ArPerceptionNode(object):
         node = SceneNode()
         pose = Vector6D().from_msg(marker.pose.pose)
         nodeid = self.onto.individuals.getFrom("hasArId","real#"+str(marker.id))
+        # print nodeid
         # nodeid = self.onto.individuals.getFrom("hasArId","real#230")
         # nodeid = "cube_GBTG_2"
         # print self.onto.individuals.getType("Cube")
@@ -153,32 +217,6 @@ class ArPerceptionNode(object):
             node.shapes.append(shape)
             node.id = nodeid[0]
             self.ar_nodes[nodeid[0]] = node
-
-    # def send_ar_tag(self,msg):
-    #     ret_list = []
-    #     for i in msg.ids:
-    #         pose_s =PoseStamped()
-    #         if not i in self.ar_nodes.keys():
-    #             pose_s.header.frame_id=''
-    #         else:
-    #             node = self.ar_nodes[i]
-    #             if node.pose is None:
-    #                 pose_s.header.frame_id=''
-    #             else:
-    #                 pose_s.pose.position.x =node.pose.pos.x
-    #                 pose_s.pose.position.y =node.pose.pos.y
-    #                 pose_s.pose.position.z =node.pose.pos.z
-    #                 quat = quaternion_from_euler(node.pose.rot.x,node.pose.rot.y,node.pose.rot.z)
-    #                 pose_s.pose.orientation.x =quat[0]
-    #                 pose_s.pose.orientation.y =quat[1]
-    #                 pose_s.pose.orientation.z =quat[2]
-    #                 pose_s.pose.orientation.w =quat[3]
-    #                 print(node)
-    #                 pose_s.header.stamp = node.pose.pos.last_update
-    #         ret_list.append(pose_s)
-    #         ret = GetPoseResponse()
-    #         ret.poses=ret_list
-    #     return ret
 
     def run(self):
         while not rospy.is_shutdown():
