@@ -16,7 +16,7 @@ from pyuwds3.utils.tf_bridge import TfBridge
 from pyuwds3.utils.view_publisher import ViewPublisher
 from pyuwds3.utils.marker_publisher import MarkerPublisher
 from pyuwds3.utils.world_publisher import WorldPublisher
-from ar_track_alvar_msgs.msg import AlvarMarkers
+from ar_track_alvar_msgs.msg import AlvarMarkers, AlvarVisibleMarkers
 import yaml
 from geometry_msgs.msg import PoseStamped
 from ontologenius import OntologiesManipulator
@@ -24,16 +24,23 @@ from ontologenius import OntologyManipulator
 from pr2_motion_tasks_msgs.srv import GetPose
 from pr2_motion_tasks_msgs.srv import GetPoseResponse
 from tf.transformations import euler_matrix
+import message_filters
+import tf
+
 
 DEFAULT_SENSOR_QUEUE_SIZE = 1
-VALUEY = 0.3
-VALUEZ = 0.3
+VALUEY = 0.4
+VALUEZ = 0.4
+MIN_VEL = 1E-2
+MIN_ANG = 1E-2
 
 class ArPerceptionNode(object):
     def __init__(self):
         """
         """
         self.tf_bridge = TfBridge()
+
+        self.listener = tf.TransformListener()
 
 
         # ontologiesManipulator =OntologiesManipulator()
@@ -54,12 +61,19 @@ class ArPerceptionNode(object):
 
         self.world_publisher = WorldPublisher("ar_tracks", self.global_frame_id)
 
-        self.ar_pose_marker_sub = rospy.Subscriber("ar_pose_marker", AlvarMarkers, self.observation_callback)
-        self.ar_pose_visible_marker = rospy.Subscriber("ar_pose_visible_marker",AlvarVisibleMarkers,self.visible_observation_callback)
-        self.joint_state_subscriber = rospy.Subscriber("/joint_states", JointState, self.joint_states_callback)
+        # self.ar_pose_marker_sub = rospy.Subscriber("ar_pose_marker", AlvarMarkers, self.observation_callback)
+
+        self.pose_marker_sub = message_filters.Subscriber("ar_pose_marker", AlvarMarkers)
+        self.visible_marker_sub = message_filters.Subscriber("ar_pose_visible_marker",AlvarVisibleMarkers)
+
+        self.synchronous_marker_sub = message_filters.TimeSynchronizer([self.visible_marker_sub,self.pose_marker_sub], 10)
+        self.synchronous_marker_sub.registerCallback(self.visible_observation_callback)
         self.ar_nodes = {}
         self.blacklist_id = []
         self.id_link = {} # Dictionarry for tag ID
+        # self.joint_state_subscriber = rospy.Subscriber("/joint_states", JointState, self.joint_states_callback)
+        self.last_head_pose = None
+        self.last_time_head_pose = rospy.Time(0)
 
 
 
@@ -71,11 +85,14 @@ class ArPerceptionNode(object):
         header = ar_marker_msgs.header
 
         for marker in ar_marker_msgs.markers:
+            print marker.id
             if not(marker.id in self.blacklist_id):
                 if not (marker.id in self.id_link):
                     self.new_node(marker)
-                # print marker.id
+                print marker.id
                 # print self.id_link
+
+                # print self.id_link.keys()
                 id = self.id_link[marker.id]
                 pose = Vector6D().from_msg(marker.pose.pose)
                 header = marker.header
@@ -89,29 +106,76 @@ class ArPerceptionNode(object):
                 all_nodes.append(self.ar_nodes[id])
 
 
-            self.world_publisher.publish(self.ar_nodes.values(), [],header)
-            # print("pub")
+        self.world_publisher.publish(self.ar_nodes.values(), [],header)
+        # print("pub")
 
-            if self.publish_tf is True:
-                self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header)
-            # print self.ar_nodes
+        if self.publish_tf is True:
+            self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header)
+        # print self.ar_nodes
 
 
-    def validity(self,marker):
-        head_pose = self.get_pose_from_tf( marker.header.frame_id,
-                                           "head_tilt_joint",
-                                            marker.header.stamp)
 
+    def movement_validity(self,header):
+
+        # frame_id = header.frame_id
+        # if frame_id[0]=='/':
+        #     frame_id = frame_id[1:]
+        frame_id = "base_footprint"
+# "head_mount_kinect2_rgb_optical_frame"
+        bool_,head_pose = self.tf_bridge.get_pose_from_tf(frame_id ,
+                                                   "head_mount_kinect2_rgb_optical_frame",
+                                                            header.stamp)
+
+        #init for the first time
+        if self.last_head_pose == None:
+            self.last_head_pose = head_pose
+
+        vel_movement = 0
+        ang_movement = 0
+        #If we are on a different time frame : (the head might have moved)
+        if header.stamp != self.last_time_head_pose:
+            vel_movement = np.linalg.norm(
+                                    head_pose.pos.to_array() -
+                                    self.last_head_pose.pos.to_array() )
+            ang_movement = np.linalg.norm(
+                                    head_pose.rot.to_array() -
+                                    self.last_head_pose.rot.to_array() )
+
+
+            self.last_time_head_pose = header.stamp
+            self.last_head_pose = head_pose
+
+        return ((vel_movement> MIN_VEL) or  ang_movement> MIN_ANG)
+
+
+
+    def pos_validity(self,marker):
+        header = marker.header
+        frame_id = header.frame_id
+        if frame_id[0]=='/':
+            frame_id = frame_id[1:]
+
+        bool_,head_pose = self.tf_bridge.get_pose_from_tf(frame_id ,
+                                           "head_mount_kinect2_rgb_optical_frame",
+                                                    header.stamp)
+
+        #init for the first time
+        if self.last_head_pose == None:
+            self.last_head_pose = head_pose
+
+        #If the head is moving, it's no time to compute thing, we dont want the frame
+
+        #NOW  we compute the direction
 
         x =  marker.pose.pose.position.x
         y =  marker.pose.pose.position.y
         z =  marker.pose.pose.position.z
         mpose=np.array([x,y,z])
-        direction = np.array([x-head_pose.pos.x,y-head_pose.pos.y,z-head_pose.pos.z])
+        direction = np.array([x-self.last_head_pose.pos.x,y-self.last_head_pose.pos.y,z-self.last_head_pose.pos.z])
 
-        rotation_matrix = euler_matrix(head_pose.rot.x,
-                                                            head_pose.rot.y,
-                                                            head_pose.rot.z)
+        rotation_matrix = euler_matrix(self.last_head_pose.rot.x,
+                                                            self.last_head_pose.rot.y,
+                                                            self.last_head_pose.rot.z)
         un_homogen = lambda x: np.array([i/(x[-1]*1.) for i in x[:-1]])
         xaxis = un_homogen(np.dot(rotation_matrix,[1,0,0,1]))
         yaxis = un_homogen(np.dot(rotation_matrix,[0,1,0,1]))
@@ -123,49 +187,46 @@ class ArPerceptionNode(object):
         proj_on_xy_plane = direction-proj_on_z
         dot_x_xy =np.dot(proj_on_xy_plane,xaxis)/np.linalg.norm(xaxis)/np.linalg.norm(proj_on_xy_plane)
         dot_x_xz =np.dot(proj_on_xz_plane,xaxis)/np.linalg.norm(xaxis)/np.linalg.norm(proj_on_xz_plane)
-        if abs(dot_x_xy)<VALUEZ and abs(dot_x_xz)<VALUEY:
-            return True
+        print dot_x_xy
+        print dot_x_xz
+        print "___"
+        return abs(dot_x_xy)>VALUEZ and abs(dot_x_xz)>VALUEY
 
 
 
 
-    def visible_observation_callback(self, ar_marker_msgs):
+
+    def visible_observation_callback(self,visible_ar_marker_msgs, ar_marker_msgs):
         """
         """
-        dic_marker = {}
-        res_list=[]
-        for marker in ar_marker_msgs:
-            if self.validity.marker(marker):
-                if marker.main_id in dic_marker.keys():
-                    dic_marker[marker.main_id].append(maker)
-                else:
-                    dic_marker[marker.main_id]=[marker]
+        marker_blacklist=[]
 
-        for marker_main_id in dic_marker.keys():
-            ret =dic_marker[marker_main_id][0]
-            ret_conf = ret.confidence
-            for marker in dic_marker[marker_main_id]:
-                if marker.confidence>ret_conf:
-                    ret_conf = marker.confidence
-                    ret = marker
-            res_list.append(ret)
+        if self.movement_validity(ar_marker_msgs.header):
+            return
 
-        self.observation(res_list,ar_marker_msgs.header)
+        for marker in visible_ar_marker_msgs.markers:
+            # if marker.header.frame_id!='':
+            if not self.pos_validity(marker):
+                if not marker.main_id in marker_blacklist:
+                    marker_blacklist.append(marker.main_id)
 
 
-    def observation(self, ar_marker_list,header):
+        self.observation( visible_ar_marker_msgs.header,ar_marker_msgs.markers,marker_blacklist)
+
+
+    def observation(self,header_, ar_marker_list,marker_blacklist):
         """
         """
-
+        # print "h"
+        header = header_
         all_nodes = []
-
         for marker in ar_marker_list:
-            if not(marker.main_id in self.blacklist_id):
-                if not (marker.main_id in self.id_link):
+            # print marker.id
+            if not((marker.id in self.blacklist_id) or (marker.id in marker_blacklist)):
+                if not (marker.id in self.id_link):
                     self.new_node(marker)
-                # print marker.main_id
-                # print self.id_link
-                id = self.id_link[marker.main_id]
+
+                id = self.id_link[marker.id]
                 pose = Vector6D().from_msg(marker.pose.pose)
                 header = marker.header
                 if self.ar_nodes[id].pose is None:
@@ -178,12 +239,12 @@ class ArPerceptionNode(object):
                 all_nodes.append(self.ar_nodes[id])
 
 
-            self.world_publisher.publish(self.ar_nodes.values(), [],header)
-            # print("pub")
+        self.world_publisher.publish(self.ar_nodes.values(), [],header)
+        # print("pub")
 
-            if self.publish_tf is True:
-                self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header)
-            # print self.ar_nodes
+        if self.publish_tf is True:
+            self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header)
+        # print self.ar_nodes
 
 
 
@@ -196,6 +257,7 @@ class ArPerceptionNode(object):
         node = SceneNode()
         pose = Vector6D().from_msg(marker.pose.pose)
         nodeid = self.onto.individuals.getFrom("hasArId","real#"+str(marker.id))
+        # print n   odeid
         # print nodeid
         # nodeid = self.onto.individuals.getFrom("hasArId","real#230")
         # nodeid = "cube_GBTG_2"
@@ -203,6 +265,8 @@ class ArPerceptionNode(object):
         if nodeid == []:
             self.blacklist_id.append(marker.id)
         else:
+            # print "hh"
+            # print marker.id
             self.id_link[marker.id]=nodeid[0]
             path=self.onto.individuals.getOn(nodeid[0],"hasMesh")[0].split("#")[-1]
 
@@ -224,5 +288,5 @@ class ArPerceptionNode(object):
 
 
 if __name__ == "__main__":
-    rospy.init_node("ar_perception", anonymous=False)
+    rospy.init_node("ar_perception_", anonymous=False)
     perception = ArPerceptionNode().run()
