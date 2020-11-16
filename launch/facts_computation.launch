@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+
+
+  <node name="facts_computation" pkg="dt_uwds3_scripts" type="facts_computation_node.py" args="" output="screen" respawn="false">
+    <rosparam subst_value="true">
+
+    </rosparam>
+  </node>
+
+</launch>

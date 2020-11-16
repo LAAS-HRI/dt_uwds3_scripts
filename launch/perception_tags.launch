@@ -11,7 +11,7 @@
   <arg name="publish_tf" default="true"/>
   <arg name="use_simulation_gui" default="false"/>
 
-  <node name="ar_perception" pkg="dt_uwds3_scripts" type="ar_perception_node.py" args="" output="screen" respawn="false">
+  <node name="ar_perception_" pkg="dt_uwds3_scripts" type="ar_perception_node.py" args="" output="screen" respawn="false">
     <rosparam subst_value="true">
       use_simulation_gui: $(arg use_simulation_gui)
       global_frame_id: $(arg global_frame_id)

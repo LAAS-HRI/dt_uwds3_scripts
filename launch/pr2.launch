@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+ <arg name="camera_frame_id" default="kinect2_link"/>
+  <arg name="global_frame_id" default="map"/>
+  <arg name="base_frame_id" default="base_footprint"/>
+
+   <param name="robot_description" textfile="$(find dt_uwds3_scripts)/urdf/pr2.urdf"/>
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" args="_use_gui:=false"/>
+
+
+
+</launch>
+
