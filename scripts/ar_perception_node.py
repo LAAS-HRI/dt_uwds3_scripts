@@ -11,6 +11,9 @@ from pyuwds3.types.vector.vector6d import Vector6D
 from pyuwds3.types.vector.vector6d_stable import Vector6DStable
 from pyuwds3.types.scene_node import SceneNode
 from pyuwds3.types.shape.mesh import Mesh
+from pyuwds3.types.shape.shape import Shape, ShapeType
+from pyuwds3.types.shape.box import Box
+from pyuwds3.types.shape.cylinder import Cylinder
 from uwds3_msgs.msg import WorldStamped
 from pyuwds3.utils.tf_bridge import TfBridge
 from pyuwds3.utils.view_publisher import ViewPublisher
@@ -29,8 +32,8 @@ import tf
 
 
 DEFAULT_SENSOR_QUEUE_SIZE = 1
-VALUEY = 0.4
-VALUEZ = 0.4
+VALUEY = 0.6
+VALUEZ = 0.6
 MIN_VEL = 1E-2
 MIN_ANG = 1E-2
 
@@ -74,9 +77,30 @@ class ArPerceptionNode(object):
         # self.joint_state_subscriber = rospy.Subscriber("/joint_states", JointState, self.joint_states_callback)
         self.last_head_pose = None
         self.last_time_head_pose = rospy.Time(0)
-
-
-
+        # shp1 = Box(dim_x=2,dim_y=2,dim_z=0.01,  name = "shp1",rx=np.sqrt(1-VALUEY*VALUEY),ry=0,rz=VALUEY,r=1.,a=.2)
+        # shp2 = Box(2,2,0.01,  "shp2",y=0,x=np.sqrt(1-VALUEY**VALUEY),z=-VALUEY,r=1.,a=0.2)
+        # shp3 = Box(2,2,0.01,  "shp3",x=np.sqrt(1-VALUEZ*VALUEZ),y=VALUEZ,z=0,r=1.,a=0.2)
+        # shp4 = Box(2,2,0.01,  "shp4",x=np.sqrt(1-VALUEZ*VALUEZ),y=-VALUEZ,z=0,r=1.,a=.2)
+        shp1 = Box(2,0.01,1, "shp1",x=0,y=0,z=0,r=1.,a=.2,rz=np.arccos(VALUEY))
+        shp2 = Box(2,0.01,1, "shp2",y=0,x=0,z=0,r=1.,a=.2,rz=-np.arccos(VALUEY))
+        shp3 = Box(2,1,0.01, "shp3",x=0,z=0,y=0,b=1.,a=.2,ry=np.arccos(VALUEZ))
+        shp4 = Box(2,1,0.01, "shp4",x=0,y=0,z=0,b=1.,a=.2,ry=-np.arccos(VALUEZ))
+        sn1 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
+        sn2 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
+        sn3 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
+        sn4 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
+        sn1.id="sn1"
+        sn2.id="sn2"
+        sn3.id="sn3"
+        sn4.id="sn4"
+        sn1.shapes=[shp1]
+        sn2.shapes=[shp2]
+        sn3.shapes=[shp3]
+        sn4.shapes=[shp4]
+        self.ar_nodes["sn1"]=sn1
+        self.ar_nodes["sn2"]=sn2
+        self.ar_nodes["sn3"]=sn3
+        self.ar_nodes["sn4"]=sn4
     def observation_callback(self, ar_marker_msgs):
         """
         """
@@ -106,6 +130,7 @@ class ArPerceptionNode(object):
                 all_nodes.append(self.ar_nodes[id])
 
 
+
         self.world_publisher.publish(self.ar_nodes.values(), [],header)
         # print("pub")
 
@@ -123,9 +148,16 @@ class ArPerceptionNode(object):
         frame_id = "base_footprint"
 # "head_mount_kinect2_rgb_optical_frame"
         bool_,head_pose = self.tf_bridge.get_pose_from_tf(frame_id ,
-                                                   "head_mount_kinect2_rgb_optical_frame",
+                                                   "head_mount_kinect2_rgb_link",
                                                             header.stamp)
-
+        self.ar_nodes["sn1"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
+                                                       rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
+        self.ar_nodes["sn2"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
+                                                       rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
+        self.ar_nodes["sn3"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
+                                                       rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
+        self.ar_nodes["sn4"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
+                                                       rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
         #init for the first time
         if self.last_head_pose == None:
             self.last_head_pose = head_pose
@@ -156,7 +188,7 @@ class ArPerceptionNode(object):
             frame_id = frame_id[1:]
 
         bool_,head_pose = self.tf_bridge.get_pose_from_tf(frame_id ,
-                                           "head_mount_kinect2_rgb_optical_frame",
+                                           "head_mount_kinect2_rgb_link",
                                                     header.stamp)
 
         #init for the first time
