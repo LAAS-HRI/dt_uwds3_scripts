@@ -6,9 +6,8 @@
 
    <param name="robot_description" textfile="$(find dt_uwds3_scripts)/urdf/pr2.urdf"/>
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
-  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" args="_use_gui:=false"/>
+  <!-- <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" args="_use_gui:=false"/> -->
 
 
 
 </launch>
-
