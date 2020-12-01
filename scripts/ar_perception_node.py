@@ -32,8 +32,11 @@ import tf
 
 
 DEFAULT_SENSOR_QUEUE_SIZE = 1
+
 VALUEY = 0.6
 VALUEZ = 0.6
+# VALUEY = 0.96
+# VALUEZ = 0.94
 MIN_VEL = 1E-2
 MIN_ANG = 1E-2
 
@@ -81,10 +84,10 @@ class ArPerceptionNode(object):
         # shp2 = Box(2,2,0.01,  "shp2",y=0,x=np.sqrt(1-VALUEY**VALUEY),z=-VALUEY,r=1.,a=0.2)
         # shp3 = Box(2,2,0.01,  "shp3",x=np.sqrt(1-VALUEZ*VALUEZ),y=VALUEZ,z=0,r=1.,a=0.2)
         # shp4 = Box(2,2,0.01,  "shp4",x=np.sqrt(1-VALUEZ*VALUEZ),y=-VALUEZ,z=0,r=1.,a=.2)
-        shp1 = Box(2,0.01,1, "shp1",x=0,y=0,z=0,r=1.,a=.2,rz=np.arccos(VALUEY))
-        shp2 = Box(2,0.01,1, "shp2",y=0,x=0,z=0,r=1.,a=.2,rz=-np.arccos(VALUEY))
-        shp3 = Box(2,1,0.01, "shp3",x=0,z=0,y=0,b=1.,a=.2,ry=np.arccos(VALUEZ))
-        shp4 = Box(2,1,0.01, "shp4",x=0,y=0,z=0,b=1.,a=.2,ry=-np.arccos(VALUEZ))
+        shp1 = Box(2,0.01,1, "shp1",x=0,y=0,z=0,r=1.,a=0,rz=np.arccos(VALUEY))
+        shp2 = Box(2,0.01,1, "shp2",y=0,x=0,z=0,r=1.,a=0,rz=-np.arccos(VALUEY))
+        shp3 = Box(2,1,0.01, "shp3",x=0,z=0,y=0,b=1.,a=0,ry=np.arccos(VALUEZ))
+        shp4 = Box(2,1,0.01, "shp4",x=0,y=0,z=0,b=1.,a=0,ry=-np.arccos(VALUEZ))
         sn1 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
         sn2 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
         sn3 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
@@ -306,10 +309,20 @@ class ArPerceptionNode(object):
             shape = Mesh(path,
                          x=0, y=0, z=0,
                          rx=0, ry=0, rz=0)
-            shape.color[0] = 0
-            shape.color[1] = 0
-            shape.color[2] = 0
-            shape.color[3] = 1.0
+            r,g,b=0,0,0
+            if "ox" in nodeid[0]:
+                r,g,b=0.82,0.42, 0.12
+            if "BBCG" in nodeid[0]:
+                r,g,b= 1,0,0
+            if "BBTG" in nodeid[0]:
+                r,g,b=0,1,0
+            if "BGCB" in nodeid[0]:
+                r,g,b=0,0,1
+
+            shape.color[0] = r
+            shape.color[1] = g
+            shape.color[2] = b
+            shape.color[3] = 1
             node.shapes.append(shape)
             node.id = nodeid[0]
             self.ar_nodes[nodeid[0]] = node
