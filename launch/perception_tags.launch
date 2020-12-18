@@ -8,12 +8,22 @@
   <arg name="max_new_marker_error" default="0.08"/>
   <arg name="max_track_error" default="0.2"/>
 
+  <arg name="filtering_y_axis" default="15" />
+  <arg name="filtering_z_axis" default="20" />
+  <arg name="minimum_velocity" default="1E-2" />
+  <arg name="minimum_angular_velocity" default="1E-2" />
+
   <arg name="publish_tf" default="true"/>
   <arg name="use_simulation_gui" default="false"/>
 
   <node name="ar_perception_" pkg="dt_uwds3_scripts" type="ar_perception_node.py" args="" output="screen" respawn="false">
     <rosparam subst_value="true">
       use_simulation_gui: $(arg use_simulation_gui)
+      filtering_y_axis  : $(filtering_y_axis) 
+      filtering_z_axis: $(filtering_z_axis)
+      minimum_velocity: $(minimum_velocity)
+      minimum_angular_velocity: $(minimum_angular_velocity)
+
       global_frame_id: $(arg global_frame_id)
       publish_tf: $(arg publish_tf)
 

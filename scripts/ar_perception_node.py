@@ -33,10 +33,10 @@ import tf
 
 DEFAULT_SENSOR_QUEUE_SIZE = 1
 
-VALUEY = 0.6
-VALUEZ = 0.6
-# VALUEY = 0.96
-# VALUEZ = 0.94
+FILTERING_Y = 53
+FILTERING_Z = 53
+# FILTERING_Y = 15
+# FILTERING_Z = 20
 MIN_VEL = 1E-2
 MIN_ANG = 1E-2
 
@@ -74,20 +74,20 @@ class ArPerceptionNode(object):
 
         self.synchronous_marker_sub = message_filters.TimeSynchronizer([self.visible_marker_sub,self.pose_marker_sub], 10)
         self.synchronous_marker_sub.registerCallback(self.visible_observation_callback)
+        self.filtering_around_y_axis = rospy.get_param("~filtering_y_axis", FILTERING_Y)
+        self.filtering_around_z_axis = rospy.get_param("~filtering_z_axis", FILTERING_Z)
+        self.minimum_velocity = rospy.get_param("~minimum_velocity", MIN_VEL)
+        self.minimum_angular_velocity = rospy.get_param("~minimum_angular_velocity", MIN_ANG)
         self.ar_nodes = {}
         self.blacklist_id = []
         self.id_link = {} # Dictionarry for tag ID
         # self.joint_state_subscriber = rospy.Subscriber("/joint_states", JointState, self.joint_states_callback)
         self.last_head_pose = None
         self.last_time_head_pose = rospy.Time(0)
-        # shp1 = Box(dim_x=2,dim_y=2,dim_z=0.01,  name = "shp1",rx=np.sqrt(1-VALUEY*VALUEY),ry=0,rz=VALUEY,r=1.,a=.2)
-        # shp2 = Box(2,2,0.01,  "shp2",y=0,x=np.sqrt(1-VALUEY**VALUEY),z=-VALUEY,r=1.,a=0.2)
-        # shp3 = Box(2,2,0.01,  "shp3",x=np.sqrt(1-VALUEZ*VALUEZ),y=VALUEZ,z=0,r=1.,a=0.2)
-        # shp4 = Box(2,2,0.01,  "shp4",x=np.sqrt(1-VALUEZ*VALUEZ),y=-VALUEZ,z=0,r=1.,a=.2)
-        shp1 = Box(2,0.01,1, "shp1",x=0,y=0,z=0,r=1.,a=0,rz=np.arccos(VALUEY))
-        shp2 = Box(2,0.01,1, "shp2",y=0,x=0,z=0,r=1.,a=0,rz=-np.arccos(VALUEY))
-        shp3 = Box(2,1,0.01, "shp3",x=0,z=0,y=0,b=1.,a=0,ry=np.arccos(VALUEZ))
-        shp4 = Box(2,1,0.01, "shp4",x=0,y=0,z=0,b=1.,a=0,ry=-np.arccos(VALUEZ))
+        shp1 = Box(2,0.01,1, "shp1",x=0,y=0,z=0,r=1.,a=0,rz=np.arccos(self.filtering_around_y_axis))
+        shp2 = Box(2,0.01,1, "shp2",y=0,x=0,z=0,r=1.,a=0,rz=-np.arccos(self.filtering_around_y_axis))
+        shp3 = Box(2,1,0.01, "shp3",x=0,z=0,y=0,b=1.,a=0,ry=np.arccos(self.filtering_around_z_axis))
+        shp4 = Box(2,1,0.01, "shp4",x=0,y=0,z=0,b=1.,a=0,ry=-np.arccos(self.filtering_around_z_axis))
         sn1 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
         sn2 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
         sn3 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
@@ -180,7 +180,8 @@ class ArPerceptionNode(object):
             self.last_time_head_pose = header.stamp
             self.last_head_pose = head_pose
 
-        return ((vel_movement> MIN_VEL) or  ang_movement> MIN_ANG)
+        return ((vel_movement> self.minimum_velocity) or
+          ang_movement> self.minimum_angular_velocity)
 
 
 
@@ -225,7 +226,8 @@ class ArPerceptionNode(object):
         print dot_x_xy
         print dot_x_xz
         print "___"
-        return abs(dot_x_xy)>VALUEZ and abs(dot_x_xz)>VALUEY
+        return abs(dot_x_xy)>np.cos(np.radians(self.filtering_y_axis)) and
+               abs(dot_x_xz)>np.cos(np.radians(self.filtering_z_axis))
 
 
 
