@@ -19,7 +19,7 @@
   <node name="ar_perception_" pkg="dt_uwds3_scripts" type="ar_perception_node.py" args="" output="screen" respawn="false">
     <rosparam subst_value="true">
       use_simulation_gui: $(arg use_simulation_gui)
-      filtering_y_axis  : $(filtering_y_axis) 
+      filtering_y_axis: $(filtering_y_axis) 
       filtering_z_axis: $(filtering_z_axis)
       minimum_velocity: $(minimum_velocity)
       minimum_angular_velocity: $(minimum_angular_velocity)
