@@ -3,52 +3,48 @@
 
   <arg name="robot" default="pr2"/>
   <!-- Camera parameters -->
-  <!-- <arg name="rgb_image_topic" default="kinect2/qhd/image_color_rect"/> -->
+  <arg name="rgb_image_topic" default="kinect2/qhd/image_color_rect"/>
   <arg name="rgb_camera_info_topic" default="kinect2/qhd/camera_info"/>
-  <!-- <arg name="depth_image_topic" default="kinect2/qhd/image_depth_rect"/> -->
+  <arg name="depth_image_topic" default="kinect2/qhd/image_depth_rect"/>
   <arg name="depth_camera_info_topic" default="kinect2/qhd/camera_info"/>
 
-  <arg name="global_frame_id" default="base_footprint"/>
+  <arg name="global_frame_id" default="map"/>
   <arg name="base_frame_id" default="base_footprint"/>
 
-  <!-- Simulation parameters -->
-  <arg name="use_simulation_gui" default="true"/>
-  <arg name="use_physical_monitoring" default="false"/>
 
-  <arg name="use_graphic_monitoring" default="true"/>
-    <arg name="use_human_perception" default="false"/>
-  <arg name="use_perspective_monitoring" default="false"/>
-  <arg name="use_object_perception" default="false"/>
+
+
+
+  <!-- Simulation parameters -->
+  <arg name="robot_urdf_file_path" default="urdf/$(arg robot).urdf"/>
+  <arg name="use_simulation_gui" default="true"/>
   <arg name="simulation_config_filename" default="$(find uwds3)/config/simulation/pr2_config.yaml"/>
   <arg name="cad_models_additional_search_path" default="$(find uwds3)/models/cad_models"/>
-  <arg name="static_entities_config_filename" default="$(find uwds3)/config/simulation/tabletop_setup.yaml"/>
-  <arg name="robot_urdf_file_path" default="urdf/$(arg robot).urdf"/>
-  <arg name="cad_models_search_path" default="$(find exp_director_task)/mesh"/>
+  <!-- <arg name="static_entities_config_filename" default="$(find uwds3)/config/simulation/empty_floor.yaml"/> -->
+
+  <arg name="static_entities_config_filename" default="$(find uwds3)/config/simulation/adream_static_entities.yaml"/>
+
+
   <!-- Other parameters -->
   <arg name="publish_viz" default="true"/>
-  <arg name="publish_tf" default="false"/>
+  <arg name="publish_tf" default="true"/>
   <arg name="use_depth" default="false"/>
 
-  <node name="internal_simulator" pkg="uwds3" type="internal_simulator_node.py" args="" output="screen" respawn="false">
+  <node name="internal_simulator" pkg="dt_uwds3_scripts" type="dt_internal_simulator_node.py" args="" output="screen" respawn="false">
     <rosparam subst_value="true">
 
-      <!-- rgb_image_topic: $(arg rgb_image_topic) -->
+      rgb_image_topic: $(arg rgb_image_topic)
       rgb_camera_info_topic: $(arg rgb_camera_info_topic)
 
-      <!-- depth_image_topic: $(arg depth_image_topic) -->
+      depth_image_topic: $(arg depth_image_topic)
       depth_camera_info_topic: $(arg depth_camera_info_topic)
 
       global_frame_id: $(arg global_frame_id)
       base_frame_id: $(arg base_frame_id)
 
       use_simulation_gui: $(arg use_simulation_gui)
-      use_object_perception: $(arg use_object_perception)
-      use_graphic_monitoring: $(arg use_graphic_monitoring)
-      use_physical_monitoring: $(arg use_physical_monitoring)
-      use_human_perception: $(arg use_human_perception)
       simulation_config_filename: $(arg simulation_config_filename)
       cad_models_additional_search_path: $(arg cad_models_additional_search_path)
-      cad_models_search_path: $(arg cad_models_search_path)
       static_entities_config_filename: $(arg static_entities_config_filename)
       robot_urdf_file_path: $(arg robot_urdf_file_path)
 
@@ -59,5 +55,6 @@
 
     </rosparam>
   </node>
+
 
 </launch>
