@@ -85,26 +85,26 @@ class ArPerceptionNode(object):
         self.last_head_pose = None
         self.last_time_head_pose = rospy.Time(0)
         print (self.filtering_y_axis)
-        shp1 = Box(2,0.01,1, "shp1",x=0,y=0,z=0,r=1.,a=0,rz=np.radians(self.filtering_y_axis))
-        shp2 = Box(2,0.01,1, "shp2",y=0,x=0,z=0,r=1.,a=0,rz=-np.radians(self.filtering_y_axis))
-        shp3 = Box(2,1,0.01, "shp3",x=0,z=0,y=0,b=1.,a=0,ry=np.radians(self.filtering_z_axis))
-        shp4 = Box(2,1,0.01, "shp4",x=0,y=0,z=0,b=1.,a=0,ry=-np.radians(self.filtering_z_axis))
-        sn1 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
-        sn2 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
-        sn3 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
-        sn4 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
-        sn1.id="sn1"
-        sn2.id="sn2"
-        sn3.id="sn3"
-        sn4.id="sn4"
-        sn1.shapes=[shp1]
-        sn2.shapes=[shp2]
-        sn3.shapes=[shp3]
-        sn4.shapes=[shp4]
-        self.ar_nodes["sn1"]=sn1
-        self.ar_nodes["sn2"]=sn2
-        self.ar_nodes["sn3"]=sn3
-        self.ar_nodes["sn4"]=sn4
+        # shp1 = Box(2,0.01,1, "shp1",x=0,y=0,z=0,r=1.,a=0,rz=np.radians(self.filtering_y_axis))
+        # shp2 = Box(2,0.01,1, "shp2",y=0,x=0,z=0,r=1.,a=0,rz=-np.radians(self.filtering_y_axis))
+        # shp3 = Box(2,1,0.01, "shp3",x=0,z=0,y=0,b=1.,a=0,ry=np.radians(self.filtering_z_axis))
+        # shp4 = Box(2,1,0.01, "shp4",x=0,y=0,z=0,b=1.,a=0,ry=-np.radians(self.filtering_z_axis))
+        # sn1 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
+        # sn2 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
+        # sn3 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
+        # sn4 = SceneNode(pose = Vector6D(x=0,y=0,z=0,rx=0,ry=0,rz=0),label="no_fact")
+        # sn1.id="sn1"
+        # sn2.id="sn2"
+        # sn3.id="sn3"
+        # sn4.id="sn4"
+        # sn1.shapes=[shp1]
+        # sn2.shapes=[shp2]
+        # sn3.shapes=[shp3]
+        # sn4.shapes=[shp4]
+        # self.ar_nodes["sn1"]=sn1
+        # self.ar_nodes["sn2"]=sn2
+        # self.ar_nodes["sn3"]=sn3
+        # self.ar_nodes["sn4"]=sn4
     def observation_callback(self, ar_marker_msgs):
         """
         """
@@ -154,14 +154,14 @@ class ArPerceptionNode(object):
         bool_,head_pose = self.tf_bridge.get_pose_from_tf(frame_id ,
                                                    "head_mount_kinect2_rgb_link",
                                                             header.stamp)
-        self.ar_nodes["sn1"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
-                                                       rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
-        self.ar_nodes["sn2"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
-                                                       rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
-        self.ar_nodes["sn3"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
-                                                       rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
-        self.ar_nodes["sn4"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
-                                                       rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
+        # self.ar_nodes["sn1"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
+        #                                                rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
+        # self.ar_nodes["sn2"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
+        #                                                rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
+        # self.ar_nodes["sn3"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
+        #                                                rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
+        # self.ar_nodes["sn4"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
+        #                                                rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
         #init for the first time
         if self.last_head_pose == None:
             self.last_head_pose = head_pose
