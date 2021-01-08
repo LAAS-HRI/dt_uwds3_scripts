@@ -224,9 +224,6 @@ class ArPerceptionNode(object):
         proj_on_xy_plane = direction-proj_on_z
         dot_x_xy =np.dot(proj_on_xy_plane,xaxis)/np.linalg.norm(xaxis)/np.linalg.norm(proj_on_xy_plane)
         dot_x_xz =np.dot(proj_on_xz_plane,xaxis)/np.linalg.norm(xaxis)/np.linalg.norm(proj_on_xz_plane)
-        print dot_x_xy
-        print dot_x_xz
-        print "___"
         return (abs(dot_x_xy)>np.cos(np.radians(self.filtering_y_axis)) and
                abs(dot_x_xz)>np.cos(np.radians(self.filtering_z_axis)))
 
@@ -238,7 +235,7 @@ class ArPerceptionNode(object):
         """
         """
         marker_blacklist=[]
-
+        print visible_ar_marker_msgs
         if self.movement_validity(ar_marker_msgs.header):
             return
 
@@ -280,7 +277,7 @@ class ArPerceptionNode(object):
         self.world_publisher.publish(self.ar_nodes.values(), [],header)
         # print("pub")
 
-        if self.publish_tf is True:
+        if self.publish_tf is True and len(header.frame_id)>0:
             self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header)
         # print self.ar_nodes
 
