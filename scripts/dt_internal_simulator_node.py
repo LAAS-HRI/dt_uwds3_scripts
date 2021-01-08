@@ -39,9 +39,6 @@ class InternalSimulatorNode(object):
         self.ar_tags_topic = rospy.get_param("ar_tags_topic", "ar_tracks")
         self.ar_tags_topic="ar_tracks"
         self.use_ar_tags = True
-        if self.use_ar_tags is True:
-            self.ar_tags_tracks = []
-            self.ar_tags_sub = rospy.Subscriber(self.ar_tags_topic, WorldStamped, self.ar_tags_callback, queue_size=DEFAULT_SENSOR_QUEUE_SIZE)
 
 
         self.use_motion_capture = rospy.get_param("~use_motion_capture", False)
@@ -64,6 +61,10 @@ class InternalSimulatorNode(object):
         if self.use_motion_capture is True:
             self.motion_capture_tracks = []
             self.motion_capture_sub = rospy.Subscriber(self.motion_capture_topic, WorldStamped, self.motion_capture_callback, queue_size=DEFAULT_SENSOR_QUEUE_SIZE)
+
+        if self.use_ar_tags is True:
+            self.ar_tags_tracks = []
+            self.ar_tags_sub = rospy.Subscriber(self.ar_tags_topic, WorldStamped, self.ar_tags_callback, queue_size=DEFAULT_SENSOR_QUEUE_SIZE)
 
         self.physics_monitor = GraphicMonitor(internal_simulator=self.internal_simulator)
 
