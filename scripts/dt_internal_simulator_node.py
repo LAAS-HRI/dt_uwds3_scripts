@@ -58,6 +58,7 @@ class InternalSimulatorNode(object):
                                                     robot_urdf_file_path,
                                                     self.global_frame_id,
                                                     self.base_frame_id)
+        self.physics_monitor = GraphicMonitor(internal_simulator=self.internal_simulator)
         if self.use_motion_capture is True:
             self.motion_capture_tracks = []
             self.motion_capture_sub = rospy.Subscriber(self.motion_capture_topic, WorldStamped, self.motion_capture_callback, queue_size=DEFAULT_SENSOR_QUEUE_SIZE)
@@ -66,11 +67,18 @@ class InternalSimulatorNode(object):
             self.ar_tags_tracks = []
             self.ar_tags_sub = rospy.Subscriber(self.ar_tags_topic, WorldStamped, self.ar_tags_callback, queue_size=DEFAULT_SENSOR_QUEUE_SIZE)
 
-        self.physics_monitor = GraphicMonitor(internal_simulator=self.internal_simulator)
 
+        # self.ar_tags_sub = rospy.Subscriber("/tf", rospy.AnyMsg, self.publish_view)
+        # self.pick_subsc = rospy.Subscriber("/pr2_fact",RobotAction, self.pick_callback)
 
+    def publish_view(self,tf):
+        self.physics_monitor.publish_view(tf)
+
+    def pick_callback(self,msg):
+        self.physics_monitor.pick_callback(msg)
 
     def ar_tags_callback(self, world_msg):
+
         ar_tags_tracks = []
         for node in world_msg.world.scene:
             # print self.internal_simulator.entity_id_map
@@ -81,6 +89,7 @@ class InternalSimulatorNode(object):
             s,pose =self.tf_bridge.get_pose_from_tf(self.global_frame_id, world_msg.header.frame_id[1:])
         else:
             pose=None
+
         self.physics_monitor.monitor(ar_tags_tracks, pose, world_msg.header)
 
     def motion_capture_callback(self, world_msg):
