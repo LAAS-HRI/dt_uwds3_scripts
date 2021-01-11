@@ -33,12 +33,12 @@ import tf
 
 DEFAULT_SENSOR_QUEUE_SIZE = 1
 
-FILTERING_Y = 53
-FILTERING_Z = 53
-# FILTERING_Y = 15
-# FILTERING_Z = 20
-MIN_VEL = 1E-2
-MIN_ANG = 1E-2
+# FILTERING_Y = 53
+# FILTERING_Z = 53
+FILTERING_Y = 15
+FILTERING_Z = 20
+MIN_VEL = 0.001
+MIN_ANG = 0.001
 
 class ArPerceptionNode(object):
     def __init__(self):
@@ -49,24 +49,22 @@ class ArPerceptionNode(object):
         self.listener = tf.TransformListener()
 
 
+
         # ontologiesManipulator =OntologiesManipulator()
         # self.onto = ontologiesManipulator.get("robot")
 
-        print("hhhhhh")
         self.global_frame_id = rospy.get_param("~global_frame_id")
-        print self.global_frame_id
-        print("hhhhhh")
+        print "global fame id is : " + str(self.global_frame_id)
         self.ontologies_manip = OntologiesManipulator()
         self.ontologies_manip.add("robot")
         self.onto=self.ontologies_manip.get("robot")
         self.onto.close()
-        print("j")
         self.global_frame_id = rospy.get_param("~global_frame_id", "map")
         self.publish_tf = rospy.get_param("~publish_tf", False)
 
 
         self.world_publisher = WorldPublisher("ar_tracks", self.global_frame_id)
-
+        self.marker_publisher = MarkerPublisher("ar_perception_marker2")
         # self.ar_pose_marker_sub = rospy.Subscriber("ar_pose_marker", AlvarMarkers, self.observation_callback)
 
         self.pose_marker_sub = message_filters.Subscriber("ar_pose_marker", AlvarMarkers)
@@ -84,7 +82,7 @@ class ArPerceptionNode(object):
         # self.joint_state_subscriber = rospy.Subscriber("/joint_states", JointState, self.joint_states_callback)
         self.last_head_pose = None
         self.last_time_head_pose = rospy.Time(0)
-        print (self.filtering_y_axis)
+        print "filtering is " + str(self.filtering_y_axis) +"° x " +str(self.filtering_z_axis)+"°"
         # shp1 = Box(2,0.01,1, "shp1",x=0,y=0,z=0,r=1.,a=0,rz=np.radians(self.filtering_y_axis))
         # shp2 = Box(2,0.01,1, "shp2",y=0,x=0,z=0,r=1.,a=0,rz=-np.radians(self.filtering_y_axis))
         # shp3 = Box(2,1,0.01, "shp3",x=0,z=0,y=0,b=1.,a=0,ry=np.radians(self.filtering_z_axis))
@@ -144,6 +142,7 @@ class ArPerceptionNode(object):
 
 
 
+
     def movement_validity(self,header):
 
         # frame_id = header.frame_id
@@ -168,19 +167,23 @@ class ArPerceptionNode(object):
 
         vel_movement = 0
         ang_movement = 0
+        delta= header.stamp-self.last_time_head_pose
         #If we are on a different time frame : (the head might have moved)
         if header.stamp != self.last_time_head_pose:
             vel_movement = np.linalg.norm(
                                     head_pose.pos.to_array() -
-                                    self.last_head_pose.pos.to_array() )
+                                    self.last_head_pose.pos.to_array() )/delta.to_sec()
             ang_movement = np.linalg.norm(
                                     head_pose.rot.to_array() -
-                                    self.last_head_pose.rot.to_array() )
+                                    self.last_head_pose.rot.to_array() )/delta.to_sec()
+
 
 
             self.last_time_head_pose = header.stamp
             self.last_head_pose = head_pose
-
+        print "\n vel/mov"
+        print  vel_movement
+        print ang_movement
         return ((vel_movement> self.minimum_velocity) or
           ang_movement> self.minimum_angular_velocity)
 
@@ -235,8 +238,8 @@ class ArPerceptionNode(object):
         """
         """
         marker_blacklist=[]
-        print visible_ar_marker_msgs
         if self.movement_validity(ar_marker_msgs.header):
+            print "moving"
             return
 
         for marker in visible_ar_marker_msgs.markers:
@@ -279,6 +282,7 @@ class ArPerceptionNode(object):
 
         if self.publish_tf is True and len(header.frame_id)>0:
             self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header)
+        self.marker_publisher.publish(self.ar_nodes.values(),header)
         # print self.ar_nodes
 
 
