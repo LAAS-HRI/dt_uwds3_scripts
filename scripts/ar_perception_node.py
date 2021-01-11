@@ -77,6 +77,7 @@ class ArPerceptionNode(object):
         self.minimum_velocity = rospy.get_param("~minimum_velocity", MIN_VEL)
         self.minimum_angular_velocity = rospy.get_param("~minimum_angular_velocity", MIN_ANG)
         self.ar_nodes = {}
+
         self.blacklist_id = []
         self.id_link = {} # Dictionarry for tag ID
         # self.joint_state_subscriber = rospy.Subscriber("/joint_states", JointState, self.joint_states_callback)
@@ -181,9 +182,6 @@ class ArPerceptionNode(object):
 
             self.last_time_head_pose = header.stamp
             self.last_head_pose = head_pose
-        print "\n vel/mov"
-        print  vel_movement
-        print ang_movement
         return ((vel_movement> self.minimum_velocity) or
           ang_movement> self.minimum_angular_velocity)
 
@@ -194,6 +192,8 @@ class ArPerceptionNode(object):
         frame_id = header.frame_id
         if frame_id[0]=='/':
             frame_id = frame_id[1:]
+
+
 
         bool_,head_pose = self.tf_bridge.get_pose_from_tf(frame_id ,
                                            "head_mount_kinect2_rgb_link",
@@ -239,7 +239,6 @@ class ArPerceptionNode(object):
         """
         marker_blacklist=[]
         if self.movement_validity(ar_marker_msgs.header):
-            print "moving"
             return
 
         for marker in visible_ar_marker_msgs.markers:
@@ -260,10 +259,10 @@ class ArPerceptionNode(object):
         all_nodes = []
         for marker in ar_marker_list:
             # print marker.id
-            if not((marker.id in self.blacklist_id) or (marker.id in marker_blacklist)):
+            if (not((marker.id in self.blacklist_id) or (marker.id in marker_blacklist))):
                 if not (marker.id in self.id_link):
                     self.new_node(marker)
-
+            if (not((marker.id in self.blacklist_id) or (marker.id in marker_blacklist))):
                 id = self.id_link[marker.id]
                 pose = Vector6D().from_msg(marker.pose.pose)
                 header = marker.header
@@ -278,7 +277,7 @@ class ArPerceptionNode(object):
 
 
         self.world_publisher.publish(self.ar_nodes.values(), [],header)
-        # print("pub")
+        print("pub")
 
         if self.publish_tf is True and len(header.frame_id)>0:
             self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header)
@@ -292,7 +291,7 @@ class ArPerceptionNode(object):
         #Get real id of marker id from onto
         #get mesh of marker id from onto
         #get label from onto
-
+        print "new_node" + str(marker.id)
         node = SceneNode()
         pose = Vector6D().from_msg(marker.pose.pose)
         nodeid = self.onto.individuals.getFrom("hasArId","real#"+str(marker.id))
@@ -301,6 +300,7 @@ class ArPerceptionNode(object):
         # nodeid = self.onto.individuals.getFrom("hasArId","real#230")
         # nodeid = "cube_GBTG_2"
         # print self.onto.individuals.getType("Cube")
+
         if nodeid == []:
             self.blacklist_id.append(marker.id)
         else:
