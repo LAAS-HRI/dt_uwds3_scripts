@@ -15,7 +15,7 @@
 
   <arg name="publish_tf" default="true"/>
   <arg name="use_simulation_gui" default="false"/>
-  <param name="robot_description" textfile="$(find dt_uwds3_scripts)/urdf/pr2.urdf"/>
+  <!-- <param name="robot_description" textfile="$(find dt_uwds3_scripts)/urdf/pr2.urdf"/> -->
   <node name="ar_perception_" pkg="dt_uwds3_scripts" type="ar_perception_node.py" args="" output="screen" respawn="false">
     <rosparam subst_value="true">
       use_simulation_gui: $(arg use_simulation_gui)
