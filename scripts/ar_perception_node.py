@@ -277,7 +277,6 @@ class ArPerceptionNode(object):
 
 
         self.world_publisher.publish(self.ar_nodes.values(), [],header)
-        print("pub")
 
         if self.publish_tf is True and len(header.frame_id)>0:
             self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header)
@@ -291,7 +290,6 @@ class ArPerceptionNode(object):
         #Get real id of marker id from onto
         #get mesh of marker id from onto
         #get label from onto
-        print "new_node" + str(marker.id)
         node = SceneNode()
         pose = Vector6D().from_msg(marker.pose.pose)
         nodeid = self.onto.individuals.getFrom("hasArId","real#"+str(marker.id))
