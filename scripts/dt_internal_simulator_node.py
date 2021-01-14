@@ -16,6 +16,9 @@ from pyuwds3.reasoning.monitoring.perspective_monitor import PerspectiveMonitor
 from pyuwds3.reasoning.monitoring.heatmap import Heatmap
 from pyuwds3.types.vector.vector6d_stable import Vector6DStable
 from pyuwds3.types.shape.mesh import Mesh
+from  pr2_motion_tasks_msgs.msg import RobotAction
+
+
 DEFAULT_SENSOR_QUEUE_SIZE = 3
 
 
@@ -68,8 +71,8 @@ class InternalSimulatorNode(object):
             self.ar_tags_sub = rospy.Subscriber(self.ar_tags_topic, WorldStamped, self.ar_tags_callback, queue_size=DEFAULT_SENSOR_QUEUE_SIZE)
 
 
-        # self.ar_tags_sub = rospy.Subscriber("/tf", rospy.AnyMsg, self.publish_view)
-        # self.pick_subsc = rospy.Subscriber("/pr2_fact",RobotAction, self.pick_callback)
+        self.ar_tags_sub = rospy.Subscriber("/tf", rospy.AnyMsg, self.publish_view)
+        self.pick_subsc = rospy.Subscriber("/pr2_tasks_node/pr2_facts",RobotAction, self.pick_callback)
 
     def publish_view(self,tf):
         self.physics_monitor.publish_view(tf)
