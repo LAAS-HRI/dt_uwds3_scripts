@@ -1,5 +1,7 @@
-<include file="$(find dt_uwds3_scripts)/launch/tag_service.launch"/>
+<launch>
+    <include file="$(find dt_uwds3_scripts)/launch/tag_service.launch"/>
 
-<include file="$(find dt_uwds3_scripts)/launch/perception_tags.launch"/>
+    <include file="$(find dt_uwds3_scripts)/launch/perception_tags.launch"/>
 
-<include file="$(find dt_uwds3_scripts)/launch/internal_simulator.launch"/>
+    <include file="$(find dt_uwds3_scripts)/launch/internal_simulator.launch"/>
+</launch>
