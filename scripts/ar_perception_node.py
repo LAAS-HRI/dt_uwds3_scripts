@@ -254,7 +254,6 @@ class ArPerceptionNode(object):
     def observation(self,header_, ar_marker_list,marker_blacklist):
         """
         """
-        # print "h"
         header = header_
         all_nodes = []
         for marker in ar_marker_list:
@@ -272,8 +271,9 @@ class ArPerceptionNode(object):
                 else:
                     self.ar_nodes[id].pose.pos.update(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
                     self.ar_nodes[id].pose.rot.update(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
-
+                self.ar_nodes[id].last_update = rospy.Time().now()
                 all_nodes.append(self.ar_nodes[id])
+
 
 
         self.world_publisher.publish(self.ar_nodes.values(), [],header)
