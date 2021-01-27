@@ -187,12 +187,20 @@ class ArPerceptionNode(object):
 
 
 
-    def pos_validity(self,marker):
+    def pos_validity_marker(self,marker):
         header = marker.header
+        x =  marker.pose.pose.position.x
+        y =  marker.pose.pose.position.y
+        z =  marker.pose.pose.position.z
+        mpose=np.array([x,y,z])
+        return self.pose_validity(mpose,header)
+
+
+    def pos_validity(self,mpose,header):
+
         frame_id = header.frame_id
         if frame_id[0]=='/':
             frame_id = frame_id[1:]
-
 
 
         bool_,head_pose = self.tf_bridge.get_pose_from_tf(frame_id ,
@@ -207,10 +215,7 @@ class ArPerceptionNode(object):
 
         #NOW  we compute the direction
 
-        x =  marker.pose.pose.position.x
-        y =  marker.pose.pose.position.y
-        z =  marker.pose.pose.position.z
-        mpose=np.array([x,y,z])
+
         direction = np.array([x-self.last_head_pose.pos.x,y-self.last_head_pose.pos.y,z-self.last_head_pose.pos.z])
 
         rotation_matrix = euler_matrix(self.last_head_pose.rot.x,
@@ -237,21 +242,23 @@ class ArPerceptionNode(object):
     def visible_observation_callback(self,visible_ar_marker_msgs, ar_marker_msgs):
         """
         """
+        print "h"
         marker_blacklist=[]
         if self.movement_validity(ar_marker_msgs.header):
+            self.observation(visible_ar_marker_msgs.header,[],[],is_mov=True)
             return
 
         for marker in visible_ar_marker_msgs.markers:
             # if marker.header.frame_id!='':
-            if not self.pos_validity(marker):
+            if not self.pos_validity_marker(marker):
                 if not marker.main_id in marker_blacklist:
                     marker_blacklist.append(marker.main_id)
 
 
-        self.observation( visible_ar_marker_msgs.header,ar_marker_msgs.markers,marker_blacklist)
+        self.observation( visible_ar_marker_msgs.header,ar_marker_msgs.markers,marker_blacklist,is_mov=False)
 
 
-    def observation(self,header_, ar_marker_list,marker_blacklist):
+    def observation(self,header_, ar_marker_list,marker_blacklist,is_mov=False):
         """
         """
         header = header_
@@ -272,8 +279,16 @@ class ArPerceptionNode(object):
                     self.ar_nodes[id].pose.pos.update(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
                     self.ar_nodes[id].pose.rot.update(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
                 self.ar_nodes[id].last_update = rospy.Time().now()
-                all_nodes.append(self.ar_nodes[id])
+                s,pose =self.tf_bridge.get_pose_from_tf(self.global_frame_id, header.frame_id[1:])
+                if s:
+                    self.ar_nodes[id].from_transform(np.dot(pose.transform(),self.ar_nodes[id].pose.transform()))
+                    all_nodes.append(self.ar_nodes[id])
 
+        header.frame_id = '/'+self.global_frame_id
+        #
+        # if not is_mov:
+        #     for node in self.ar_nodes.values():
+        #         if self.pose_validity(node.pose.pos.to_array()[:3],header)
 
 
         self.world_publisher.publish(self.ar_nodes.values(), [],header)
@@ -308,18 +323,20 @@ class ArPerceptionNode(object):
             path=self.onto.individuals.getOn(nodeid[0],"hasMesh")[0].split("#")[-1]
 
             node.label ="label"
+            print path
             shape = Mesh(path,
                          x=0, y=0, z=0,
                          rx=0, ry=0, rz=0)
             r,g,b=0,0,0
             if "ox" in nodeid[0]:
                 r,g,b=0.82,0.42, 0.12
-            if "BBCG" in nodeid[0]:
-                r,g,b= 1,0,0
-            if "BBTG" in nodeid[0]:
-                r,g,b=0,1,0
-            if "BGCB" in nodeid[0]:
+            if "cube" in nodeid[0]:
                 r,g,b=0,0,1
+            if "GBTB" in nodeid[0]:
+                r,g,b= 1,0,0
+            if "BGTG" in nodeid[0]:
+                r,g,b=0,1,0
+
 
             shape.color[0] = r
             shape.color[1] = g
