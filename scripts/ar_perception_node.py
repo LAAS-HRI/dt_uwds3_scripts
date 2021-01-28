@@ -248,8 +248,9 @@ class ArPerceptionNode(object):
         """
         """
         marker_blacklist=[]
+        marker_seen_map={}
         if self.movement_validity(ar_marker_msgs.header):
-            self.observation(visible_ar_marker_msgs.header,[],[],is_mov=True)
+            self.observation(visible_ar_marker_msgs.header,[],[],{},is_mov=True)
             return
 
         for marker in visible_ar_marker_msgs.markers:
@@ -257,12 +258,16 @@ class ArPerceptionNode(object):
             if not self.pos_validity_marker(marker):
                 if not marker.main_id in marker_blacklist:
                     marker_blacklist.append(marker.main_id)
+        for marker in visible_ar_marker_msgs.markers:
+                if (not marker.main_id in marker_blacklist) :
+                    if(not marker.main_id in marker_seen_map):
+                        marker_seen_map[marker.main_id]=[]
+                    marker_seen_map[marker.main_id].append(marker)
+
+        self.observation( visible_ar_marker_msgs.header,ar_marker_msgs.markers,marker_blacklist,marker_seen_map,is_mov=False)
 
 
-        self.observation( visible_ar_marker_msgs.header,ar_marker_msgs.markers,marker_blacklist,is_mov=False)
-
-
-    def observation(self,header_, ar_marker_list,marker_blacklist,is_mov=False):
+    def observation(self,header_, ar_marker_list,marker_blacklist,marker_seen_map,is_mov=False):
         """
         """
         header = header_
@@ -291,6 +296,17 @@ class ArPerceptionNode(object):
                     else:
                             self.ar_nodes[id].pose.pos.update(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
                             self.ar_nodes[id].pose.rot.update(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
+                    for marker_seen in marker_seen_map[marker.id]:
+                        pose_s = Vector6D().from_msg(marker_seen.pose.pose)
+                        if not marker_seen.id in self.ar_nodes[id].last_seen_position:
+                            self.ar_nodes[id].last_seen_position[marker_seen.id] = Vector6DStable(
+                            x=pose_s.pos.x, y=pose_s.pos.y, z=pose_s.pos.z,rx=pose_s.rot.x,
+                             ry=pose_s.rot.y, rz=pose_s.rot.z, time=header.stamp)
+                        else:
+                            self.ar_nodes[id].last_seen_position[marker_seen.id].pos.update(x=pose_s.pos.x, y=pose_s.pos.y, z=pose_s.pos.z, time=header.stamp)
+                            self.ar_nodes[id].last_seen_position[marker_seen.id].rot.update(x=pose_s.rot.x, y=pose_s.rot.y, z=pose_s.rot.z, time=header.stamp)
+                        self.ar_nodes[id].last_seen_position[marker_seen.id].from_transform(np.dot(pose_map.transform(),
+                                self.ar_nodes[id].last_seen_position[marker_seen.id].transform()))
 
                     self.ar_nodes[id].pose.from_transform(np.dot(pose_map.transform(),self.ar_nodes[id].pose.transform()))
                     self.ar_nodes[id].last_update = header.stamp
