@@ -366,5 +366,5 @@ class ArPerceptionNode(object):
 
 
 if __name__ == "__main__":
-    rospy.init_node("ar_perception_1", anonymous=False)
+    rospy.init_node("ar_perception", anonymous=False)
     perception = ArPerceptionNode().run()
