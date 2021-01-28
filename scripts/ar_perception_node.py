@@ -278,14 +278,14 @@ class ArPerceptionNode(object):
                 id = self.id_link[marker.id]
                 pose = Vector6D().from_msg(marker.pose.pose)
                 header = marker.header
-                header_global.sed = header.seq
+                header_global.seq = header.seq
                 header_global.stamp = header.stamp
                 s,pose_map =self.tf_bridge.get_pose_from_tf(self.global_frame_id, header.frame_id[1:],header.stamp)
                 if self.ar_nodes_local[id].pose is None:
                     self.ar_nodes_local[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
                                                                    rx=pose.rot.x, ry=pose.rot.y, rz=pose.rot.z, time=header.stamp)
                 if s:
-                    if self.ar_nodes[id].pose is None
+                    if self.ar_nodes[id].pose is None:
                         self.ar_nodes[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
                                                                       rx=pose.rot.x, ry=pose.rot.y, rz=pose.rot.z, time=header.stamp)
                     else:
@@ -300,7 +300,7 @@ class ArPerceptionNode(object):
 
 
         self.world_publisher_global.publish(self.ar_nodes.values(), [],header_global)
-        selfl.world_publisher_local.publish(self.ar_nodes_local.values(),[],header)
+        self.world_publisher_local.publish(self.ar_nodes_local.values(),[],header)
 
         if self.publish_tf is True and len(header_global.frame_id)>0:
             self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header_global)
