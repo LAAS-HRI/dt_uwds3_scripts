@@ -63,7 +63,8 @@ class ArPerceptionNode(object):
         self.publish_tf = rospy.get_param("~publish_tf", False)
 
 
-        self.world_publisher = WorldPublisher("ar_tracks", self.global_frame_id)
+        self.world_publisher_global = WorldPublisher("ar_tracks", self.global_frame_id)
+        self.world_publisher_local =  WorldPublisher("ar_tracks_local")
         self.marker_publisher = MarkerPublisher("ar_perception_marker2")
         # self.ar_pose_marker_sub = rospy.Subscriber("ar_pose_marker", AlvarMarkers, self.observation_callback)
 
@@ -77,6 +78,7 @@ class ArPerceptionNode(object):
         self.minimum_velocity = rospy.get_param("~minimum_velocity", MIN_VEL)
         self.minimum_angular_velocity = rospy.get_param("~minimum_angular_velocity", MIN_ANG)
         self.ar_nodes = {}
+        self.ar_nodes_local={}
 
         self.blacklist_id = []
         self.id_link = {} # Dictionarry for tag ID
@@ -193,7 +195,7 @@ class ArPerceptionNode(object):
         y =  marker.pose.pose.position.y
         z =  marker.pose.pose.position.z
         mpose=np.array([x,y,z])
-        return self.pose_validity(mpose,header)
+        return self.pos_validity(mpose,header)
 
 
     def pos_validity(self,mpose,header):
@@ -202,7 +204,9 @@ class ArPerceptionNode(object):
         if frame_id[0]=='/':
             frame_id = frame_id[1:]
 
-
+        x =  mpose[0]
+        y =  mpose[1]
+        z =  mpose[2]
         bool_,head_pose = self.tf_bridge.get_pose_from_tf(frame_id ,
                                            "head_mount_kinect2_rgb_link",
                                                     header.stamp)
@@ -232,6 +236,7 @@ class ArPerceptionNode(object):
         proj_on_xy_plane = direction-proj_on_z
         dot_x_xy =np.dot(proj_on_xy_plane,xaxis)/np.linalg.norm(xaxis)/np.linalg.norm(proj_on_xy_plane)
         dot_x_xz =np.dot(proj_on_xz_plane,xaxis)/np.linalg.norm(xaxis)/np.linalg.norm(proj_on_xz_plane)
+
         return (abs(dot_x_xy)>np.cos(np.radians(self.filtering_y_axis)) and
                abs(dot_x_xz)>np.cos(np.radians(self.filtering_z_axis)))
 
@@ -242,7 +247,6 @@ class ArPerceptionNode(object):
     def visible_observation_callback(self,visible_ar_marker_msgs, ar_marker_msgs):
         """
         """
-        print "h"
         marker_blacklist=[]
         if self.movement_validity(ar_marker_msgs.header):
             self.observation(visible_ar_marker_msgs.header,[],[],is_mov=True)
@@ -262,9 +266,11 @@ class ArPerceptionNode(object):
         """
         """
         header = header_
+        header_global = rospy.Header(header_.seq,header_.stamp,'/'+self.global_frame_id)
         all_nodes = []
         for marker in ar_marker_list:
             # print marker.id
+
             if (not((marker.id in self.blacklist_id) or (marker.id in marker_blacklist))):
                 if not (marker.id in self.id_link):
                     self.new_node(marker)
@@ -272,30 +278,33 @@ class ArPerceptionNode(object):
                 id = self.id_link[marker.id]
                 pose = Vector6D().from_msg(marker.pose.pose)
                 header = marker.header
-                if self.ar_nodes[id].pose is None:
-                    self.ar_nodes[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
+                header_global.sed = header.seq
+                header_global.stamp = header.stamp
+                s,pose_map =self.tf_bridge.get_pose_from_tf(self.global_frame_id, header.frame_id[1:],header.stamp)
+                if self.ar_nodes_local[id].pose is None:
+                    self.ar_nodes_local[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
                                                                    rx=pose.rot.x, ry=pose.rot.y, rz=pose.rot.z, time=header.stamp)
-                else:
-                    self.ar_nodes[id].pose.pos.update(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
-                    self.ar_nodes[id].pose.rot.update(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
-                self.ar_nodes[id].last_update = rospy.Time().now()
-                s,pose =self.tf_bridge.get_pose_from_tf(self.global_frame_id, header.frame_id[1:])
                 if s:
-                    self.ar_nodes[id].from_transform(np.dot(pose.transform(),self.ar_nodes[id].pose.transform()))
-                    all_nodes.append(self.ar_nodes[id])
+                    if self.ar_nodes[id].pose is None
+                        self.ar_nodes[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
+                                                                      rx=pose.rot.x, ry=pose.rot.y, rz=pose.rot.z, time=header.stamp)
+                    else:
+                            self.ar_nodes[id].pose.pos.update(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
+                            self.ar_nodes[id].pose.rot.update(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
 
-        header.frame_id = '/'+self.global_frame_id
-        #
-        # if not is_mov:
-        #     for node in self.ar_nodes.values():
-        #         if self.pose_validity(node.pose.pos.to_array()[:3],header)
+                    self.ar_nodes[id].pose.from_transform(np.dot(pose_map.transform(),self.ar_nodes[id].pose.transform()))
+                    self.ar_nodes[id].last_update = header.stamp
 
 
-        self.world_publisher.publish(self.ar_nodes.values(), [],header)
+        # print self.ar_nodes.keys()
 
-        if self.publish_tf is True and len(header.frame_id)>0:
-            self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header)
-        self.marker_publisher.publish(self.ar_nodes.values(),header)
+
+        self.world_publisher_global.publish(self.ar_nodes.values(), [],header_global)
+        selfl.world_publisher_local.publish(self.ar_nodes_local.values(),[],header)
+
+        if self.publish_tf is True and len(header_global.frame_id)>0:
+            self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header_global)
+        self.marker_publisher.publish(self.ar_nodes.values(),header_global)
         # print self.ar_nodes
 
 
@@ -306,7 +315,7 @@ class ArPerceptionNode(object):
         #get mesh of marker id from onto
         #get label from onto
         node = SceneNode()
-        pose = Vector6D().from_msg(marker.pose.pose)
+        node_local=SceneNode()
         nodeid = self.onto.individuals.getFrom("hasArId","real#"+str(marker.id))
         # print n   odeid
         # print nodeid
@@ -323,6 +332,7 @@ class ArPerceptionNode(object):
             path=self.onto.individuals.getOn(nodeid[0],"hasMesh")[0].split("#")[-1]
 
             node.label ="label"
+            node_local.label = "label"
             print path
             shape = Mesh(path,
                          x=0, y=0, z=0,
@@ -344,7 +354,11 @@ class ArPerceptionNode(object):
             shape.color[3] = 1
             node.shapes.append(shape)
             node.id = nodeid[0]
+            node_local.shapes.append(shape)
+            node_local.id = nodeid[0]
+
             self.ar_nodes[nodeid[0]] = node
+            self.ar_nodes_local[nodeid[0]] = node_local
 
     def run(self):
         while not rospy.is_shutdown():
@@ -352,5 +366,5 @@ class ArPerceptionNode(object):
 
 
 if __name__ == "__main__":
-    rospy.init_node("ar_perception_", anonymous=False)
+    rospy.init_node("ar_perception_1", anonymous=False)
     perception = ArPerceptionNode().run()

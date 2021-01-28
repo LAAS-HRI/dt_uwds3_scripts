@@ -33,7 +33,7 @@ class TagServiceNode(object):
         """
 
         self.tag_service = rospy.Service("~getPose",GetPose, self.send_ar_tag, buff_size=65536)
-        self.subscriber = rospy.Subscriber("ar_tracks", WorldStamped, self.world_callback)
+        self.subscriber = rospy.Subscriber("ar_tracks_local", WorldStamped, self.world_callback)
         self.scene_nodes = {}
         self.header = rospy.Header()
 
