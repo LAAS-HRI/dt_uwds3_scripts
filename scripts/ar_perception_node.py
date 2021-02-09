@@ -312,6 +312,9 @@ class ArPerceptionNode(object):
                     if self.ar_nodes[id].pose is None:
                         self.ar_nodes[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
                                                                       rx=pose.rot.x, ry=pose.rot.y, rz=pose.rot.z, time=header.stamp)
+                        if id == "cube_GGTB":
+                            print pose.pos.z
+                            print self.ar_nodes[id].pose.pos.z
                     else:
                             self.ar_nodes[id].pose.pos.update_no_kalmann(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
                             self.ar_nodes[id].pose.rot.update_no_kalmann(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
@@ -325,17 +328,20 @@ class ArPerceptionNode(object):
 
 
         # print self.ar_nodes.keys()
-
-
         self.world_publisher_global.publish(self.ar_nodes.values(), [],header_global)
         self.world_publisher_local.publish(self.ar_nodes_local.values(),[],header)
 
-        # for i in self.ar_nodes.values():
-        #     print i.id
-        #     print i.pose.to_array()
+
         if self.publish_tf is True and len(header_global.frame_id)>0:
             self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header_global)
         self.marker_publisher.publish(self.ar_nodes.values(),header_global)
+        for i in self.ar_nodes_local.values():
+            if i.id == "cube_GGTB":
+                print i.pose.pos.z
+        for i in self.ar_nodes.values():
+            if i.id == "cube_GGTB":
+                print i.pose.pos.z
+                print "============"
         # print self.ar_nodes
 
 
