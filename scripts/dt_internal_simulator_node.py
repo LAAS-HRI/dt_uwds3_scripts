@@ -87,6 +87,9 @@ class InternalSimulatorNode(object):
             # print self.internal_simulator.entity_id_map
             ar_tags_tracks.append(SceneNode().from_msg(node))
         self.ar_tags_tracks = ar_tags_tracks
+        for i in ar_tags_tracks:
+            if i.id=="table_1":
+                print i.last_update
         #world_msg.header.frame_id[1:]
         if world_msg.header.frame_id[1:] != '':
             s,pose =self.tf_bridge.get_pose_from_tf(self.global_frame_id, world_msg.header.frame_id[1:])

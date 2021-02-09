@@ -195,7 +195,30 @@ class ArPerceptionNode(object):
         y =  marker.pose.pose.position.y
         z =  marker.pose.pose.position.z
         mpose=np.array([x,y,z])
-        return self.pos_validity(mpose,header)
+        return self.pos_validityv2(mpose,header)
+
+    def pos_validityv2(self,mvect,header):
+        mpose = Vector6DStable(mvect[0],mvect[1],mvect[2])
+        frame_id = header.frame_id
+        if frame_id[0]=='/':
+            frame_id = frame_id[1:]
+        bool_,head_pose = self.tf_bridge.get_pose_from_tf("head_mount_kinect2_rgb_link" ,
+                                          frame_id,header.stamp)
+
+        #init for the first time
+        if self.last_head_pose == None and bool_:
+            self.last_head_pose = head_pose
+
+        mpose.from_transform(np.dot(head_pose.transform(),mpose.transform()))
+        #mpose is now in the head frame
+        if mpose.pos.x==0:
+            return False
+        xy_angle = np.degrees(np.arctan(mpose.pos.y/mpose.pos.x))
+        xz_angle = np.degrees(np.arctan(mpose.pos.z/mpose.pos.x))
+
+        return (abs(xy_angle)<self.filtering_y_axis and
+               abs(xz_angle)<self.filtering_z_axis)
+
 
 
     def pos_validity(self,mpose,header):
@@ -297,22 +320,26 @@ class ArPerceptionNode(object):
                             self.ar_nodes[id].pose.pos.update_no_kalmann(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
                             self.ar_nodes[id].pose.rot.update_no_kalmann(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
                     for marker_seen in marker_seen_map[marker.id]:
+                        print "here"
                         pose_s = Vector6D().from_msg(marker_seen.pose.pose)
                         if not marker_seen.id in self.ar_nodes[id].last_seen_position:
+                            print "there init"
                             self.ar_nodes[id].last_seen_position[marker_seen.id] = Vector6DStable(
                             x=pose_s.pos.x, y=pose_s.pos.y, z=pose_s.pos.z,rx=pose_s.rot.x,
                              ry=pose_s.rot.y, rz=pose_s.rot.z, time=header.stamp)
                         else:
+                            print "therem ian"
                             self.ar_nodes[id].last_seen_position[marker_seen.id].pos.update_no_kalmann(x=pose_s.pos.x, y=pose_s.pos.y, z=pose_s.pos.z, time=header.stamp)
                             self.ar_nodes[id].last_seen_position[marker_seen.id].rot.update_no_kalmann(x=pose_s.rot.x, y=pose_s.rot.y, z=pose_s.rot.z, time=header.stamp)
                         self.ar_nodes[id].last_seen_position[marker_seen.id].from_transform(np.dot(pose_map.transform(),
                                 self.ar_nodes[id].last_seen_position[marker_seen.id].transform()))
 
                     self.ar_nodes[id].pose.from_transform(np.dot(pose_map.transform(),self.ar_nodes[id].pose.transform()))
-                    self.ar_nodes[id].last_update = header.stamp
+                    self.ar_nodes[id].last_update = marker.header.stamp
 
 
         # print self.ar_nodes.keys()
+
 
 
         self.world_publisher_global.publish(self.ar_nodes.values(), [],header_global)
