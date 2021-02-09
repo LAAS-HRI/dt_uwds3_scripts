@@ -65,7 +65,7 @@ class ArPerceptionNode(object):
 
         self.world_publisher_global = WorldPublisher("ar_tracks", self.global_frame_id)
         self.world_publisher_local =  WorldPublisher("ar_tracks_local")
-        self.marker_publisher = MarkerPublisher("ar_perception_marker")
+        self.marker_publisher = MarkerPublisher("ar_perception_marker2")
         # self.ar_pose_marker_sub = rospy.Subscriber("ar_pose_marker", AlvarMarkers, self.observation_callback)
 
         self.pose_marker_sub = message_filters.Subscriber("ar_pose_marker", AlvarMarkers)
@@ -114,9 +114,11 @@ class ArPerceptionNode(object):
         header = ar_marker_msgs.header
 
         for marker in ar_marker_msgs.markers:
+            print marker.id
             if not(marker.id in self.blacklist_id):
                 if not (marker.id in self.id_link):
                     self.new_node(marker)
+                print marker.id
                 # print self.id_link
 
                 # print self.id_link.keys()
@@ -127,8 +129,8 @@ class ArPerceptionNode(object):
                     self.ar_nodes[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
                                                                    rx=pose.rot.x, ry=pose.rot.y, rz=pose.rot.z, time=header.stamp)
                 else:
-                    self.ar_nodes[id].pose.pos.update_no_kalmann(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
-                    self.ar_nodes[id].pose.rot.update_no_kalmann(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
+                    self.ar_nodes[id].pose.pos.update(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
+                    self.ar_nodes[id].pose.rot.update(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
 
                 all_nodes.append(self.ar_nodes[id])
 
@@ -151,9 +153,9 @@ class ArPerceptionNode(object):
         #     frame_id = frame_id[1:]
         frame_id = "base_footprint"
 # "head_mount_kinect2_rgb_optical_frame"
-        bool_,head_pose = self.tf_bridge.get_pose_from_tf("head_mount_kinect2_rgb_link",frame_id ,header.stamp)
-        if not bool_:
-            return False
+        bool_,head_pose = self.tf_bridge.get_pose_from_tf(frame_id ,
+                                                   "head_mount_kinect2_rgb_link",
+                                                            header.stamp)
         # self.ar_nodes["sn1"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
         #                                                rx=head_pose.rot.x, ry=head_pose.rot.y, rz=head_pose.rot.z, time=header.stamp)
         # self.ar_nodes["sn2"].pose= Vector6DStable(x=head_pose.pos.x, y=head_pose.pos.y, z=head_pose.pos.z,
@@ -193,33 +195,7 @@ class ArPerceptionNode(object):
         y =  marker.pose.pose.position.y
         z =  marker.pose.pose.position.z
         mpose=np.array([x,y,z])
-
-
-        return self.pos_validityv2(mpose,header)
-
-
-    def pos_validityv2(self,mvect,header):
-        mpose = Vector6DStable(mvect[0],mvect[1],mvect[2])
-        frame_id = header.frame_id
-        if frame_id[0]=='/':
-            frame_id = frame_id[1:]
-        bool_,head_pose = self.tf_bridge.get_pose_from_tf("head_mount_kinect2_rgb_link" ,
-                                          frame_id,header.stamp)
-
-        #init for the first time
-        if self.last_head_pose == None and bool_:
-            self.last_head_pose = head_pose
-
-        mpose.from_transform(np.dot(head_pose.transform(),mpose.transform()))
-        #mpose is now in the head frame
-        if mpose.pos.x==0:
-            return False
-        xy_angle = np.degrees(np.arctan(mpose.pos.y/mpose.pos.x))
-        xz_angle = np.degrees(np.arctan(mpose.pos.z/mpose.pos.x))
-
-        return (abs(xy_angle)<self.filtering_y_axis and
-               abs(xz_angle)<self.filtering_z_axis)
-
+        return self.pos_validity(mpose,header)
 
 
     def pos_validity(self,mpose,header):
@@ -235,12 +211,13 @@ class ArPerceptionNode(object):
                                            "head_mount_kinect2_rgb_link",
                                                     header.stamp)
 
-
         #init for the first time
         if self.last_head_pose == None:
             self.last_head_pose = head_pose
 
+        #If the head is moving, it's no time to compute thing, we dont want the frame
 
+        #NOW  we compute the direction
 
 
         direction = np.array([x-self.last_head_pose.pos.x,y-self.last_head_pose.pos.y,z-self.last_head_pose.pos.z])
@@ -266,24 +243,31 @@ class ArPerceptionNode(object):
 
 
 
+
     def visible_observation_callback(self,visible_ar_marker_msgs, ar_marker_msgs):
         """
         """
         marker_blacklist=[]
+        marker_seen_map={}
         if self.movement_validity(ar_marker_msgs.header):
-            self.observation(visible_ar_marker_msgs.header,[],[],is_mov=True)
+            self.observation(visible_ar_marker_msgs.header,[],[],{},is_mov=True)
             return
+
         for marker in visible_ar_marker_msgs.markers:
             # if marker.header.frame_id!='':
             if not self.pos_validity_marker(marker):
                 if not marker.main_id in marker_blacklist:
                     marker_blacklist.append(marker.main_id)
+        for marker in visible_ar_marker_msgs.markers:
+                if (not marker.main_id in marker_blacklist) :
+                    if(not marker.main_id in marker_seen_map):
+                        marker_seen_map[marker.main_id]=[]
+                    marker_seen_map[marker.main_id].append(marker)
+
+        self.observation( visible_ar_marker_msgs.header,ar_marker_msgs.markers,marker_blacklist,marker_seen_map,is_mov=False)
 
 
-        self.observation( visible_ar_marker_msgs.header,ar_marker_msgs.markers,marker_blacklist,is_mov=False)
-
-
-    def observation(self,header_, ar_marker_list,marker_blacklist,is_mov=False):
+    def observation(self,header_, ar_marker_list,marker_blacklist,marker_seen_map,is_mov=False):
         """
         """
         header = header_
@@ -297,13 +281,10 @@ class ArPerceptionNode(object):
                     self.new_node(marker)
             if (not((marker.id in self.blacklist_id) or (marker.id in marker_blacklist))):
                 id = self.id_link[marker.id]
-                pose = Vector6DStable().from_msg(marker.pose.pose)
-
-
+                pose = Vector6D().from_msg(marker.pose.pose)
                 header = marker.header
                 header_global.seq = header.seq
                 header_global.stamp = header.stamp
-
                 s,pose_map =self.tf_bridge.get_pose_from_tf(self.global_frame_id, header.frame_id[1:],header.stamp)
                 if self.ar_nodes_local[id].pose is None:
                     self.ar_nodes_local[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
@@ -313,14 +294,21 @@ class ArPerceptionNode(object):
                         self.ar_nodes[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
                                                                       rx=pose.rot.x, ry=pose.rot.y, rz=pose.rot.z, time=header.stamp)
                     else:
-                            self.ar_nodes[id].pose.pos.update_no_kalmann(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
-                            self.ar_nodes[id].pose.rot.update_no_kalmann(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
+                            self.ar_nodes[id].pose.pos.update(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
+                            self.ar_nodes[id].pose.rot.update(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
+                    for marker_seen in marker_seen_map[marker.id]:
+                        pose_s = Vector6D().from_msg(marker_seen.pose.pose)
+                        if not marker_seen.id in self.ar_nodes[id].last_seen_position:
+                            self.ar_nodes[id].last_seen_position[marker_seen.id] = Vector6DStable(
+                            x=pose_s.pos.x, y=pose_s.pos.y, z=pose_s.pos.z,rx=pose_s.rot.x,
+                             ry=pose_s.rot.y, rz=pose_s.rot.z, time=header.stamp)
+                        else:
+                            self.ar_nodes[id].last_seen_position[marker_seen.id].pos.update(x=pose_s.pos.x, y=pose_s.pos.y, z=pose_s.pos.z, time=header.stamp)
+                            self.ar_nodes[id].last_seen_position[marker_seen.id].rot.update(x=pose_s.rot.x, y=pose_s.rot.y, z=pose_s.rot.z, time=header.stamp)
+                        self.ar_nodes[id].last_seen_position[marker_seen.id].from_transform(np.dot(pose_map.transform(),
+                                self.ar_nodes[id].last_seen_position[marker_seen.id].transform()))
 
-                    # if id=="box_C3":
-                    #     print header.stamp
                     self.ar_nodes[id].pose.from_transform(np.dot(pose_map.transform(),self.ar_nodes[id].pose.transform()))
-                    # if id=="box_C3":
-                    #     print self.ar_nodes[id].pose.pos
                     self.ar_nodes[id].last_update = header.stamp
 
 
@@ -330,9 +318,6 @@ class ArPerceptionNode(object):
         self.world_publisher_global.publish(self.ar_nodes.values(), [],header_global)
         self.world_publisher_local.publish(self.ar_nodes_local.values(),[],header)
 
-        # for i in self.ar_nodes.values():
-        #     print i.id
-        #     print i.pose.to_array()
         if self.publish_tf is True and len(header_global.frame_id)>0:
             self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header_global)
         self.marker_publisher.publish(self.ar_nodes.values(),header_global)
