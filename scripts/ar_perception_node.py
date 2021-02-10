@@ -305,6 +305,8 @@ class ArPerceptionNode(object):
                 header_global.stamp = header.stamp
 
                 s,pose_map =self.tf_bridge.get_pose_from_tf(self.global_frame_id, header.frame_id[1:],header.stamp)
+                s1,pose_map1 = self.tf_bridge.get_pose_from_tf( "base_footprint","map",header.stamp)
+                print pose_map1
                 if self.ar_nodes_local[id].pose is None:
                     self.ar_nodes_local[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
                                                                    rx=pose.rot.x, ry=pose.rot.y, rz=pose.rot.z, time=header.stamp)
@@ -312,21 +314,37 @@ class ArPerceptionNode(object):
                     if self.ar_nodes[id].pose is None:
                         self.ar_nodes[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
                                                                       rx=pose.rot.x, ry=pose.rot.y, rz=pose.rot.z, time=header.stamp)
-                        if id == "cube_GGTB":
-                            print pose.pos.z
-                            print self.ar_nodes[id].pose.pos.z
                     else:
+                            # if id == "cube_GGTB":
+                            #     print pose.pos.z
+
                             self.ar_nodes[id].pose.pos.update_no_kalmann(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
                             self.ar_nodes[id].pose.rot.update_no_kalmann(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
 
+                            self.ar_nodes_local[id].pose.pos.update_no_kalmann(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z, time=header.stamp)
+                            self.ar_nodes_local[id].pose.rot.update_no_kalmann(x=pose.rot.x, y=pose.rot.y, z=pose.rot.z, time=header.stamp)
+                            # if id == "cube_GGTB":
+                            #     print pose.pos.z
+
+                    if id == "cube_GGTB":
+                        # print pose.pos.z
+                        # print self.ar_nodes[id].pose.pos.z
+                        if "cube_GGTB" in self.ar_nodes:
+                            print "1 " + str(self.ar_nodes["cube_GGTB"].pose.pos.z)
                     # if id=="box_C3":
                     #     print header.stamp
+                    print pose_map
                     self.ar_nodes[id].pose.from_transform(np.dot(pose_map.transform(),self.ar_nodes[id].pose.transform()))
+                    if id == "cube_GGTB":
+                        # print pose.pos.z
+                        # print self.ar_nodes[id].pose.pos.z
+                        if "cube_GGTB" in self.ar_nodes:
+                            print "é " + str(self.ar_nodes["cube_GGTB"].pose.pos.z)
                     # if id=="box_C3":
                     #     print self.ar_nodes[id].pose.pos
                     self.ar_nodes[id].last_update = header.stamp
-
-
+        if "cube_GGTB" in self.ar_nodes:
+            print self.ar_nodes["cube_GGTB"].pose.pos.z
         # print self.ar_nodes.keys()
         self.world_publisher_global.publish(self.ar_nodes.values(), [],header_global)
         self.world_publisher_local.publish(self.ar_nodes_local.values(),[],header)
@@ -403,5 +421,5 @@ class ArPerceptionNode(object):
 
 
 if __name__ == "__main__":
-    rospy.init_node("ar_perception", anonymous=False)
+    rospy.init_node("ar_perceptionaa", anonymous=False)
     perception = ArPerceptionNode().run()
