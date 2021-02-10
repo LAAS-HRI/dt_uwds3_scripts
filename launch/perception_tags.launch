@@ -17,9 +17,10 @@
   <arg name="use_simulation_gui" default="false"/>
   <param name="robot_description" textfile="$(find dt_uwds3_scripts)/urdf/pr2.urdf"/>
   <!-- <rosparam file="$(find uwds3)/config/simulation/adream_static_entities.yaml" command="load" ns="local_costmap" /> -->
-  <node name="map2base_psublisher" pkg="tf2_ros" type="static_transform_publisher" args="0 0 0 0 0 0  base_footprint map"/>
+  <!-- <node name="map2odom" pkg="tf2_ros" type="static_transform_publisher" args="0 0 0 0 0 0   map odom_combined"/>
+  <node name="odom2base_psublisher" pkg="tf2_ros" type="static_transform_publisher" args="0 0 0 0 0 0   odom_combined base_footprint"/> -->
 
-  <node name="ar_perception_" pkg="dt_uwds3_scripts" type="ar_perception_node.py" args="" output="screen" respawn="false">
+  <node name="ar_perceptionaa" pkg="dt_uwds3_scripts" type="ar_perception_node.py" args="" output="screen" respawn="false">
     <rosparam subst_value="true">
       use_simulation_gui: $(arg use_simulation_gui)
       filtering_y_axis: $(arg filtering_y_axis)
