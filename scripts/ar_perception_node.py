@@ -65,7 +65,7 @@ class ArPerceptionNode(object):
 
         self.world_publisher_global = WorldPublisher("ar_tracks", self.global_frame_id)
         self.world_publisher_local =  WorldPublisher("ar_tracks_local")
-        self.marker_publisher = MarkerPublisher("ar_perception_marker")
+        # self.marker_publisher = MarkerPublisher("ar_perception_marker")
         # self.ar_pose_marker_sub = rospy.Subscriber("ar_pose_marker", AlvarMarkers, self.observation_callback)
 
         self.pose_marker_sub = message_filters.Subscriber("ar_pose_marker", AlvarMarkers)
@@ -352,7 +352,7 @@ class ArPerceptionNode(object):
 
         if self.publish_tf is True and len(header_global.frame_id)>0:
             self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header_global)
-        self.marker_publisher.publish(self.ar_nodes.values(),header_global)
+        # self.marker_publisher.publish(self.ar_nodes.values(),header_global)
         for i in self.ar_nodes_local.values():
             if i.id == "cube_GGTB":
                 print i.pose.pos.z

@@ -13,7 +13,7 @@ from pyuwds3.utils.world_publisher import WorldPublisher
 from pyuwds3.reasoning.simulation.internal_simulator import InternalSimulator
 from pyuwds3.reasoning.monitoring.graphic_monitor import GraphicMonitor
 from pyuwds3.reasoning.monitoring.perspective_monitor import PerspectiveMonitor
-from pyuwds3.reasoning.monitoring.heatmap import Heatmap
+# from pyuwds3.reasoning.monitoring.heatmap import Heatmap
 from pyuwds3.types.vector.vector6d_stable import Vector6DStable
 from pyuwds3.types.shape.mesh import Mesh
 from  pr2_motion_tasks_msgs.msg import RobotAction
