@@ -94,6 +94,7 @@ class InternalSimulatorNode(object):
             pose=None
 
         self.physics_monitor.monitor(ar_tags_tracks, pose, world_msg.header)
+        # self.physics_monitor.monitor([], pose, world_msg.header)
 
     def motion_capture_callback(self, world_msg):
         motion_capture_tracks = []
