@@ -326,42 +326,18 @@ class ArPerceptionNode(object):
                             # if id == "cube_GGTB":
                             #     print pose.pos.z
 
-                    if id == "cube_GGTB":
-                        # print pose.pos.z
-                        # print self.ar_nodes[id].pose.pos.z
-                        if "cube_GGTB" in self.ar_nodes:
-                            print "1 " + str(self.ar_nodes["cube_GGTB"].pose.pos.z)
-                    # if id=="box_C3":
-                    #     print header.stamp
-                    print pose_map
                     self.ar_nodes[id].pose.from_transform(np.dot(pose_map.transform(),self.ar_nodes[id].pose.transform()))
-                    if id == "cube_GGTB":
-                        # print pose.pos.z
-                        # print self.ar_nodes[id].pose.pos.z
-                        if "cube_GGTB" in self.ar_nodes:
-                            print "é " + str(self.ar_nodes["cube_GGTB"].pose.pos.z)
-                    # if id=="box_C3":
+                            # if id=="box_C3":
                     #     print self.ar_nodes[id].pose.pos
                     self.ar_nodes[id].last_update = header.stamp
-        if "cube_GGTB" in self.ar_nodes:
-            print self.ar_nodes["cube_GGTB"].pose.pos.z
-        # print self.ar_nodes.keys()
-        self.world_publisher_global.publish(self.ar_nodes.values(), [],header_global)
+            self.world_publisher_global.publish(self.ar_nodes.values(), [],header_global)
         self.world_publisher_local.publish(self.ar_nodes_local.values(),[],header)
 
 
         if self.publish_tf is True and len(header_global.frame_id)>0:
             self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header_global)
         # self.marker_publisher.publish(self.ar_nodes.values(),header_global)
-        for i in self.ar_nodes_local.values():
-            if i.id == "cube_GGTB":
-                print i.pose.pos.z
-        for i in self.ar_nodes.values():
-            if i.id == "cube_GGTB":
-                print i.pose.pos.z
-                print "============"
-        # print self.ar_nodes
-
+    
 
 
 
