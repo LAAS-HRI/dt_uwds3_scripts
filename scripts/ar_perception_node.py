@@ -306,7 +306,7 @@ class ArPerceptionNode(object):
 
                 s,pose_map =self.tf_bridge.get_pose_from_tf(self.global_frame_id, header.frame_id[1:],header.stamp)
                 s1,pose_map1 = self.tf_bridge.get_pose_from_tf( "base_footprint","map",header.stamp)
-                print pose_map1
+
                 if self.ar_nodes_local[id].pose is None:
                     self.ar_nodes_local[id].pose = Vector6DStable(x=pose.pos.x, y=pose.pos.y, z=pose.pos.z,
                                                                    rx=pose.rot.x, ry=pose.rot.y, rz=pose.rot.z, time=header.stamp)
@@ -337,7 +337,7 @@ class ArPerceptionNode(object):
         if self.publish_tf is True and len(header_global.frame_id)>0:
             self.tf_bridge.publish_tf_frames(self.ar_nodes.values(), [], header_global)
         # self.marker_publisher.publish(self.ar_nodes.values(),header_global)
-    
+
 
 
 

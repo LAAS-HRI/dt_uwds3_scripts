@@ -71,7 +71,7 @@ class InternalSimulatorNode(object):
             self.ar_tags_sub = rospy.Subscriber(self.ar_tags_topic, WorldStamped, self.ar_tags_callback, queue_size=DEFAULT_SENSOR_QUEUE_SIZE)
 
 
-        self.ar_tags_sub = rospy.Subscriber("/mocap_tracks", rospy.AnyMsg, self.publish_view)
+        # self.ar_tags_sub = rospy.Subscriber("/mocap_tracks", rospy.AnyMsg, self.publish_view)
         self.pick_subsc = rospy.Subscriber("/pr2_tasks_node/pr2_facts",RobotAction, self.pick_callback)
 
     def publish_view(self,tf):
@@ -92,7 +92,8 @@ class InternalSimulatorNode(object):
             s,pose =self.tf_bridge.get_pose_from_tf(self.global_frame_id, world_msg.header.frame_id[1:])
         else:
             pose=None
-
+        # t1=rospy.Time().now().to_sec()
+        # print "T1111111111111111" +str(t1)
         self.physics_monitor.monitor(ar_tags_tracks, pose, world_msg.header)
         # self.physics_monitor.monitor([], pose, world_msg.header)
 
