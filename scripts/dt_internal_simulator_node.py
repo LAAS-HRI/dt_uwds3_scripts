@@ -54,7 +54,7 @@ class InternalSimulatorNode(object):
         cad_models_additional_search_path = rospy.get_param("~cad_models_additional_search_path", "")
         static_entities_config_filename = rospy.get_param("~static_entities_config_filename", "")
         robot_urdf_file_path = rospy.get_param("~robot_urdf_file_path", "")
-        self.internal_simulator = InternalSimulator(True,
+        self.internal_simulator = InternalSimulator(False,
                                                     simulation_config_filename,
                                                     cad_models_additional_search_path,
                                                     static_entities_config_filename,
@@ -65,13 +65,14 @@ class InternalSimulatorNode(object):
         if self.use_motion_capture is True:
             self.motion_capture_tracks = []
             self.motion_capture_sub = rospy.Subscriber(self.motion_capture_topic, WorldStamped, self.motion_capture_callback, queue_size=DEFAULT_SENSOR_QUEUE_SIZE)
+            self.heatmap = rospy.Subscriber(self.motion_capture_topic, WorldStamped, self.heatmap_publisher, queue_size=DEFAULT_SENSOR_QUEUE_SIZE)
 
         if self.use_ar_tags is True:
             self.ar_tags_tracks = []
             self.ar_tags_sub = rospy.Subscriber(self.ar_tags_topic, WorldStamped, self.ar_tags_callback, queue_size=DEFAULT_SENSOR_QUEUE_SIZE)
 
 
-        # self.ar_tags_sub = rospy.Subscriber("/mocap_tracks", rospy.AnyMsg, self.publish_view)
+        self.ar_tags_sub = rospy.Subscriber("/mocap_tracks", rospy.AnyMsg, self.publish_view)
         self.pick_subsc = rospy.Subscriber("/pr2_tasks_node/pr2_facts",RobotAction, self.pick_callback)
 
     def publish_view(self,tf):
@@ -96,6 +97,11 @@ class InternalSimulatorNode(object):
         # print "T1111111111111111" +str(t1)
         self.physics_monitor.monitor(ar_tags_tracks, pose, world_msg.header)
         # self.physics_monitor.monitor([], pose, world_msg.header)
+    def heatmap_publisher(self,msg):
+        header = rospy.Header()
+        header.frame_id = 'map'
+        header.stamp = msg.header.stamp
+        self.physics_monitor.monitor([], Vector6DStable(), header)
 
     def motion_capture_callback(self, world_msg):
         motion_capture_tracks = []
